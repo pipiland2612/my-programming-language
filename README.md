@@ -82,6 +82,7 @@ MEPL is an expression-based language where everything evaluates to a value. It f
 | List | `[A]` | Homogeneous list |
 | Sum | `A + B` | Tagged union (left or right) |
 | Record | `{x: Int, y: Bool}` | Named fields |
+| ADT | `type Option = None | Some of Int` | Named algebraic data type |
 
 ### Variables and Declarations
 
@@ -171,6 +172,17 @@ let n = person.name     // "Alice"
 let a = person.age      // 30
 ```
 
+### Algebraic Data Types
+
+```
+type Option = None | Some of Int
+
+let getValue : Option -> Int = fn (opt : Option) =>
+  case opt of
+    | None => 0
+    | Some n => n
+```
+
 ### Recursion
 
 Recursion uses the fixed-point operator `fix`:
@@ -249,3 +261,4 @@ All examples are in the `examples/` directory. For each feature, there is a work
 | Strings | `strings.mepl` | `strings-errors.mepl` |
 | Records | `records.mepl` | `records-errors.mepl` |
 | Loops | `loops.mepl` | `loops-errors.mepl` |
+| ADTs | `adt.mepl` | `adt-errors.mepl` |

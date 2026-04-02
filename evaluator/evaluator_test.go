@@ -238,6 +238,123 @@ func TestTupleValString(t *testing.T) {
 	assert.Equal(t, "(1, true)", v.String())
 }
 
+// --- ADT tests ---
+
+func TestEvalADTNullaryConstructor(t *testing.T) {
+	val, _ := checkAndEvalProgram(t, `type Color = Red | Green | Blue; Red`)
+	cv, ok := val.(*ConstructorVal)
+	require.True(t, ok, "expected ConstructorVal, got %T", val)
+	assert.Equal(t, "Red", cv.Tag)
+	assert.Nil(t, cv.Value)
+}
+
+func TestEvalADTUnaryConstructor(t *testing.T) {
+	val, _ := checkAndEvalProgram(t, `type Option = None | Some of Int; Some 42`)
+	cv, ok := val.(*ConstructorVal)
+	require.True(t, ok, "expected ConstructorVal, got %T", val)
+	assert.Equal(t, "Some", cv.Tag)
+	assert.Equal(t, "42", cv.Value.String())
+}
+
+func TestEvalADTPatternMatchNullary(t *testing.T) {
+	val, _ := checkAndEvalProgram(t, `
+type Color = Red | Green | Blue;
+let name : Color -> String = fn (c : Color) =>
+  case c of
+    | Red => "red"
+    | Green => "green"
+    | Blue => "blue";
+name Green
+`)
+	assert.Equal(t, "green", val.String())
+}
+
+func TestEvalADTPatternMatchUnary(t *testing.T) {
+	val, _ := checkAndEvalProgram(t, `
+type Option = None | Some of Int;
+let getValue : Option -> Int = fn (opt : Option) =>
+  case opt of
+    | None => 0
+    | Some n => n;
+getValue (Some 99)
+`)
+	assert.Equal(t, "99", val.String())
+}
+
+func TestEvalADTPatternMatchNone(t *testing.T) {
+	val, _ := checkAndEvalProgram(t, `
+type Option = None | Some of Int;
+let getValue : Option -> Int = fn (opt : Option) =>
+  case opt of
+    | None => 0
+    | Some n => n;
+getValue None
+`)
+	assert.Equal(t, "0", val.String())
+}
+
+func TestEvalADTMultiplePayloadTypes(t *testing.T) {
+	val, _ := checkAndEvalProgram(t, `
+type Shape = Circle of Int | Rectangle of (Int, Int);
+let area : Shape -> Int = fn (s : Shape) =>
+  case s of
+    | Circle r => r * r * 3
+    | Rectangle dims => fst dims * snd dims;
+area (Rectangle (3, 4))
+`)
+	assert.Equal(t, "12", val.String())
+}
+
+func TestEvalADTRecursiveType(t *testing.T) {
+	val, _ := checkAndEvalProgram(t, `
+type Expr = Lit of Int | Add of (Expr, Expr) | Neg of Expr;
+let eval : Expr -> Int = fix fn (eval : Expr -> Int) =>
+  fn (e : Expr) =>
+    case e of
+      | Lit n => n
+      | Add pair => eval (fst pair) + eval (snd pair)
+      | Neg inner => 0 - eval inner;
+eval (Add (Lit 10, Neg (Lit 3)))
+`)
+	assert.Equal(t, "7", val.String())
+}
+
+func TestEvalADTEquality(t *testing.T) {
+	val, _ := checkAndEvalProgram(t, `type Color = Red | Green | Blue; Red == Red`)
+	assert.Equal(t, "true", val.String())
+
+	val2, _ := checkAndEvalProgram(t, `type Color = Red | Green | Blue; Red == Blue`)
+	assert.Equal(t, "false", val2.String())
+}
+
+func TestEvalADTEqualityWithPayload(t *testing.T) {
+	val, _ := checkAndEvalProgram(t, `type Option = None | Some of Int; (Some 1) == (Some 1)`)
+	assert.Equal(t, "true", val.String())
+
+	val2, _ := checkAndEvalProgram(t, `type Option = None | Some of Int; (Some 1) == (Some 2)`)
+	assert.Equal(t, "false", val2.String())
+
+	val3, _ := checkAndEvalProgram(t, `type Option = None | Some of Int; None == None`)
+	assert.Equal(t, "true", val3.String())
+}
+
+func TestEvalADTPrint(t *testing.T) {
+	_, ev := checkAndEvalProgram(t, `
+type Option = None | Some of Int;
+println None;
+println (Some 42);
+`)
+	assert.Equal(t, "None\nSome 42\n", ev.GetOutput())
+}
+
+func TestConstructorValString(t *testing.T) {
+	v := &ConstructorVal{Tag: "None", Value: nil}
+	assert.Equal(t, "None", v.String())
+
+	v2 := &ConstructorVal{Tag: "Some", Value: &IntVal{Value: 42}}
+	assert.Equal(t, "Some 42", v2.String())
+}
+
 func TestRecordValString(t *testing.T) {
 	v := &RecordVal{Fields: []RecordFieldVal{
 		{Name: "x", Value: &IntVal{42}},

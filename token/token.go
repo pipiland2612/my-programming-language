@@ -67,6 +67,7 @@ const (
 	END
 	LENGTH
 	CHARAT
+	TYPE
 
 	// Type keywords
 	INT_TYPE
@@ -96,7 +97,7 @@ var tokenNames = map[TokenType]string{
 	INL: "inl", INR: "inr", CASE: "case", OF: "of",
 	IMPORT: "import", PRINT: "print", PRINTLN: "println",
 	FOR: "for", TO: "to", DO: "do", END: "end",
-	LENGTH: "length", CHARAT: "charAt",
+	LENGTH: "length", CHARAT: "charAt", TYPE: "type",
 	INT_TYPE: "Int", BOOL_TYPE: "Bool", STRING_TYPE: "String", UNIT_TYPE: "Unit",
 	EOF: "EOF", ILLEGAL: "ILLEGAL",
 }
@@ -137,6 +138,7 @@ var Keywords = map[string]TokenType{
 	"Bool":    BOOL_TYPE,
 	"String":  STRING_TYPE,
 	"Unit":    UNIT_TYPE,
+	"type":    TYPE,
 }
 
 type Pos struct {

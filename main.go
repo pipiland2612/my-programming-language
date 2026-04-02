@@ -136,8 +136,8 @@ func evalInput(input string, chk *checker.Checker, ev *evaluator.Evaluator) (eva
 		return nil, err
 	}
 
-	// Try as declaration first (let at top level)
-	if len(tokens) > 0 && tokens[0].Literal == "let" {
+	// Try as declaration first (let/type at top level)
+	if len(tokens) > 0 && (tokens[0].Literal == "let" || tokens[0].Literal == "type") {
 		p := parser.New(tokens)
 		prog, err := p.ParseProgram()
 		if err == nil && len(prog.Declarations) > 0 {

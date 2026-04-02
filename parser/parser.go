@@ -5,6 +5,7 @@ import (
 	"my-programming-language/ast"
 	"my-programming-language/token"
 	"strconv"
+	"unicode"
 )
 
 type Parser struct {
@@ -67,6 +68,12 @@ func (p *Parser) ParseProgram() (*ast.Program, error) {
 				return nil, err
 			}
 			prog.Declarations = append(prog.Declarations, imp)
+		} else if p.cur().Type == token.TYPE {
+			td, err := p.parseTypeDecl()
+			if err != nil {
+				return nil, err
+			}
+			prog.Declarations = append(prog.Declarations, td)
 		} else if p.cur().Type == token.LET {
 			decl, err := p.parseLetDeclaration()
 			if err != nil {
@@ -98,6 +105,51 @@ func (p *Parser) parseImport() (ast.Expr, error) {
 		return nil, err
 	}
 	return &ast.ImportExpr{Path: t.Literal, Pos: pos}, nil
+}
+
+func (p *Parser) parseTypeDecl() (ast.Expr, error) {
+	pos := p.cur().Pos
+	p.advance() // type
+
+	name, err := p.expect(token.IDENT)
+	if err != nil {
+		return nil, err
+	}
+
+	if _, err := p.expect(token.EQ); err != nil {
+		return nil, err
+	}
+
+	// Optional leading pipe
+	if p.cur().Type == token.PIPE {
+		p.advance()
+	}
+
+	var variants []ast.VariantDef
+	for {
+		ctorName, err := p.expect(token.IDENT)
+		if err != nil {
+			return nil, err
+		}
+
+		var payload ast.Type
+		if p.cur().Type == token.OF {
+			p.advance()
+			payload, err = p.parseType()
+			if err != nil {
+				return nil, err
+			}
+		}
+
+		variants = append(variants, ast.VariantDef{Name: ctorName.Literal, Payload: payload})
+
+		if p.cur().Type != token.PIPE {
+			break
+		}
+		p.advance()
+	}
+
+	return &ast.TypeDecl{Name: name.Literal, Variants: variants, Pos: pos}, nil
 }
 
 func (p *Parser) parseLetDeclaration() (ast.Expr, error) {
@@ -710,7 +762,18 @@ func (p *Parser) parsePattern() (ast.Pattern, error) {
 		}
 		return &ast.InrPattern{Name: name.Literal}, nil
 	case token.IDENT:
-		// h :: t pattern
+		name := p.cur().Literal
+		// Check if this is a constructor pattern (starts with uppercase)
+		if len(name) > 0 && unicode.IsUpper([]rune(name)[0]) {
+			p.advance()
+			// Check for argument binding
+			arg := ""
+			if p.cur().Type == token.IDENT && p.cur().Type != token.FATARROW {
+				arg = p.advance().Literal
+			}
+			return &ast.ConstructorPattern{Constructor: name, Arg: arg}, nil
+		}
+		// h :: t pattern (cons pattern for lists)
 		head := p.advance()
 		if _, err := p.expect(token.DCOLON); err != nil {
 			return nil, err
@@ -953,6 +1016,13 @@ func (p *Parser) parsePrimaryType() (ast.Type, error) {
 			return nil, err
 		}
 		return &ast.ListType{Elem: elem}, nil
+	case token.IDENT:
+		name := p.cur().Literal
+		if len(name) > 0 && unicode.IsUpper([]rune(name)[0]) {
+			p.advance()
+			return &ast.ADTType{Name: name}, nil
+		}
+		return nil, p.errAt(p.cur().Pos, fmt.Sprintf("expected type, got '%s'", p.cur().Literal))
 	default:
 		return nil, p.errAt(p.cur().Pos, fmt.Sprintf("expected type, got '%s'", p.cur().Literal))
 	}

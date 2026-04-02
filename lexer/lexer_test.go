@@ -65,6 +65,21 @@ func TestTokenizeLengthAndCharAt(t *testing.T) {
 	}
 }
 
+func TestTokenizeTypeDecl(t *testing.T) {
+	src := `type Option = None | Some of Int`
+	toks, err := New(src).Tokenize()
+	require.NoError(t, err)
+
+	wantTypes := []token.TokenType{
+		token.TYPE, token.IDENT, token.EQ, token.IDENT, token.PIPE,
+		token.IDENT, token.OF, token.INT_TYPE, token.EOF,
+	}
+	require.Len(t, toks, len(wantTypes))
+	for i, want := range wantTypes {
+		assert.Equal(t, want, toks[i].Type, "token %d: expected %s, got %s", i, want, toks[i].Type)
+	}
+}
+
 func TestTokenizeRecordAndDot(t *testing.T) {
 	src := `{x = 1}.x`
 	toks, err := New(src).Tokenize()

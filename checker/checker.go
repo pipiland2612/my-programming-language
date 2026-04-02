@@ -29,16 +29,23 @@ func (env *TypeEnv) Set(name string, t ast.Type) {
 	env.bindings[name] = t
 }
 
+// ADTDef stores the definition of an algebraic data type
+type ADTDef struct {
+	Name     string
+	Variants []ast.VariantDef
+}
+
 type Checker struct {
-	env *TypeEnv
+	env  *TypeEnv
+	ADTs map[string]*ADTDef // type name -> definition
 }
 
 func New() *Checker {
-	return &Checker{env: NewTypeEnv(nil)}
+	return &Checker{env: NewTypeEnv(nil), ADTs: make(map[string]*ADTDef)}
 }
 
 func NewWithEnv(env *TypeEnv) *Checker {
-	return &Checker{env: env}
+	return &Checker{env: env, ADTs: make(map[string]*ADTDef)}
 }
 
 func (c *Checker) Env() *TypeEnv {
@@ -97,6 +104,9 @@ func typesEqual(a, b ast.Type) bool {
 			}
 		}
 		return true
+	case *ast.ADTType:
+		b, ok := b.(*ast.ADTType)
+		return ok && a.Name == b.Name
 	}
 	return false
 }
@@ -110,6 +120,11 @@ func (c *Checker) CheckProgram(prog *ast.Program) error {
 		switch d := decl.(type) {
 		case *ast.ImportExpr:
 			// Imports are handled externally
+			continue
+		case *ast.TypeDecl:
+			if err := c.checkTypeDecl(d); err != nil {
+				return err
+			}
 			continue
 		case *ast.LetExpr:
 			if d.Body != nil {
@@ -471,6 +486,12 @@ func (c *Checker) check(expr ast.Expr, env *TypeEnv) (ast.Type, error) {
 			return nil, errAt(e.Pos, fmt.Sprintf("length expects a String or List, got %s", t.String()))
 		}
 
+	case *ast.TypeDecl:
+		if err := c.checkTypeDecl(e); err != nil {
+			return nil, err
+		}
+		return &ast.UnitType{}, nil
+
 	case *ast.CharAtExpr:
 		strT, err := c.check(e.Str, env)
 		if err != nil {
@@ -632,9 +653,75 @@ func (c *Checker) checkCase(e *ast.CaseExpr, env *TypeEnv) (ast.Type, error) {
 					resultType.String(), bt.String()))
 			}
 		}
+	case *ast.ConstructorPattern:
+		// ADT case
+		adtT, ok := scrutT.(*ast.ADTType)
+		if !ok {
+			return nil, errAt(e.Pos, fmt.Sprintf("case matching on constructor pattern but scrutinee has type %s", scrutT.String()))
+		}
+		adtDef, ok := c.ADTs[adtT.Name]
+		if !ok {
+			return nil, errAt(e.Pos, fmt.Sprintf("unknown type '%s'", adtT.Name))
+		}
+		for _, branch := range e.Branches {
+			branchEnv := NewTypeEnv(env)
+			cp, ok := branch.Pattern.(*ast.ConstructorPattern)
+			if !ok {
+				return nil, errAt(e.Pos, "mixed patterns in case expression")
+			}
+			// Find the variant
+			var found *ast.VariantDef
+			for i := range adtDef.Variants {
+				if adtDef.Variants[i].Name == cp.Constructor {
+					found = &adtDef.Variants[i]
+					break
+				}
+			}
+			if found == nil {
+				return nil, errAt(e.Pos, fmt.Sprintf("constructor '%s' is not a variant of type '%s'", cp.Constructor, adtT.Name))
+			}
+			if found.Payload != nil && cp.Arg == "" {
+				return nil, errAt(e.Pos, fmt.Sprintf("constructor '%s' expects an argument", cp.Constructor))
+			}
+			if found.Payload == nil && cp.Arg != "" {
+				return nil, errAt(e.Pos, fmt.Sprintf("constructor '%s' takes no arguments", cp.Constructor))
+			}
+			if cp.Arg != "" {
+				branchEnv.Set(cp.Arg, found.Payload)
+			}
+			bt, err := c.check(branch.Body, branchEnv)
+			if err != nil {
+				return nil, err
+			}
+			if resultType == nil {
+				resultType = bt
+			} else if !typesEqual(resultType, bt) {
+				return nil, errAt(e.Pos, fmt.Sprintf("case branches must have same type: expected %s, got %s",
+					resultType.String(), bt.String()))
+			}
+		}
 	default:
 		return nil, errAt(e.Pos, "unsupported pattern type in case expression")
 	}
 
 	return resultType, nil
+}
+
+func (c *Checker) checkTypeDecl(td *ast.TypeDecl) error {
+	adtType := &ast.ADTType{Name: td.Name}
+
+	// Register the ADT definition
+	c.ADTs[td.Name] = &ADTDef{Name: td.Name, Variants: td.Variants}
+
+	// Register constructors in the type environment
+	for _, v := range td.Variants {
+		if v.Payload == nil {
+			// Nullary constructor: type is just the ADT type
+			c.env.Set(v.Name, adtType)
+		} else {
+			// Unary constructor: type is Payload -> ADTType
+			c.env.Set(v.Name, &ast.FuncType{Param: v.Payload, Return: adtType})
+		}
+	}
+	return nil
 }

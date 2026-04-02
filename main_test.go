@@ -115,6 +115,22 @@ func TestCLI_StringsExample(t *testing.T) {
 	require.Contains(t, stdout, "MEPL\n")
 }
 
+func TestCLI_ADTExample(t *testing.T) {
+	stdout, stderr, err := runCLI(t, filepath.Join("examples", "adt.mepl"))
+	require.NoError(t, err, "expected success; stderr:\n%s", stderr)
+
+	// Color enum
+	require.Contains(t, stdout, "red\ngreen\nblue\n")
+	// Option type
+	require.Contains(t, stdout, "0\n42\n")
+	// Shape area: Circle 5 -> 75, Rectangle (3,4) -> 12
+	require.Contains(t, stdout, "75\n12\n")
+	// Recursive Expr: Add(Lit 10, Neg(Lit 3)) -> 7
+	require.Contains(t, stdout, "7\n")
+	// Equality
+	require.Contains(t, stdout, "true\nfalse\ntrue\nfalse\ntrue\n")
+}
+
 func TestCLI_AllExamplesRun(t *testing.T) {
 	// Verify every non-error example runs without error
 	examples := []string{
@@ -122,7 +138,7 @@ func TestCLI_AllExamplesRun(t *testing.T) {
 		"functions.mepl", "pairs.mepl", "lists.mepl", "sums.mepl",
 		"recursion.mepl", "declarations.mepl", "imports.mepl",
 		"comments.mepl", "printing.mepl", "strings.mepl",
-		"tuples.mepl", "records.mepl", "loops.mepl",
+		"tuples.mepl", "records.mepl", "loops.mepl", "adt.mepl",
 	}
 	for _, ex := range examples {
 		t.Run(ex, func(t *testing.T) {
@@ -141,6 +157,7 @@ func TestCLI_AllErrorExamplesReject(t *testing.T) {
 		"recursion-errors.mepl", "declarations-errors.mepl",
 		"imports-errors.mepl", "comments-errors.mepl", "printing-errors.mepl",
 		"strings-errors.mepl", "tuples-errors.mepl", "records-errors.mepl", "loops-errors.mepl",
+		"adt-errors.mepl",
 	}
 	for _, ex := range examples {
 		t.Run(ex, func(t *testing.T) {

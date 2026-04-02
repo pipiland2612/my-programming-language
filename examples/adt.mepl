@@ -1,0 +1,56 @@
+// Algebraic Data Types - Custom Types and Pattern Matching
+
+// Simple enum type (nullary constructors)
+type Color = Red | Green | Blue;
+
+let colorName : Color -> String = fn (c : Color) =>
+  case c of
+    | Red => "red"
+    | Green => "green"
+    | Blue => "blue";
+
+println (colorName Red);
+println (colorName Green);
+println (colorName Blue);
+
+// Option type with payload
+type Option = None | Some of Int;
+
+let getValue : Option -> Int = fn (opt : Option) =>
+  case opt of
+    | None => 0
+    | Some n => n;
+
+println (getValue None);
+println (getValue (Some 42));
+
+// Shape type with different payloads
+type Shape = Circle of Int | Rectangle of (Int, Int);
+
+let area : Shape -> Int = fn (s : Shape) =>
+  case s of
+    | Circle r => r * r * 3
+    | Rectangle dims => fst dims * snd dims;
+
+println (area (Circle 5));
+println (area (Rectangle (3, 4)));
+
+// Nested ADTs
+type Expr = Lit of Int | Add of (Expr, Expr) | Neg of Expr;
+
+let eval : Expr -> Int = fix fn (eval : Expr -> Int) =>
+  fn (e : Expr) =>
+    case e of
+      | Lit n => n
+      | Add pair => eval (fst pair) + eval (snd pair)
+      | Neg inner => 0 - eval inner;
+
+let myExpr = Add (Lit 10, Neg (Lit 3));
+println (eval myExpr);
+
+// Equality on ADTs
+println (Red == Red);
+println (Red == Blue);
+println ((Some 1) == (Some 1));
+println ((Some 1) == (Some 2));
+println (None == None)

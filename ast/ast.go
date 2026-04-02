@@ -26,6 +26,7 @@ type RecordFieldType struct {
 	Name string
 	Type Type
 }
+type ADTType struct{ Name string }
 
 func (IntType) typeNode()    {}
 func (BoolType) typeNode()   {}
@@ -37,6 +38,7 @@ func (ListType) typeNode()   {}
 func (SumType) typeNode()    {}
 func (TupleType) typeNode()  {}
 func (RecordType) typeNode() {}
+func (ADTType) typeNode()    {}
 
 func (IntType) String() string    { return "Int" }
 func (BoolType) String() string   { return "Bool" }
@@ -66,6 +68,7 @@ func (t RecordType) String() string {
 	}
 	return "{" + strings.Join(parts, ", ") + "}"
 }
+func (t ADTType) String() string { return t.Name }
 
 // Expressions
 
@@ -198,11 +201,16 @@ type NilPattern struct{}                          // []
 type ConsPattern struct{ Head, Tail string }      // h :: t
 type InlPattern struct{ Name string }             // inl x
 type InrPattern struct{ Name string }             // inr y
+type ConstructorPattern struct {
+	Constructor string // e.g. "Some", "None"
+	Arg         string // bound variable name, empty for nullary
+}
 
-func (NilPattern) patternNode()  {}
-func (ConsPattern) patternNode() {}
-func (InlPattern) patternNode()  {}
-func (InrPattern) patternNode()  {}
+func (NilPattern) patternNode()          {}
+func (ConsPattern) patternNode()         {}
+func (InlPattern) patternNode()          {}
+func (InrPattern) patternNode()          {}
+func (ConstructorPattern) patternNode()  {}
 
 type FixExpr struct {
 	Expr Expr
@@ -255,6 +263,17 @@ type ForExpr struct {
 	Pos   token.Pos
 }
 
+type TypeDecl struct {
+	Name     string
+	Variants []VariantDef
+	Pos      token.Pos
+}
+
+type VariantDef struct {
+	Name    string
+	Payload Type // nil for nullary constructors
+}
+
 type LengthExpr struct {
 	Expr Expr
 	Pos  token.Pos
@@ -294,6 +313,7 @@ func (TupleAccessExpr) exprNode()  {}
 func (RecordExpr) exprNode()       {}
 func (RecordAccessExpr) exprNode() {}
 func (ForExpr) exprNode()          {}
+func (TypeDecl) exprNode()         {}
 func (LengthExpr) exprNode()       {}
 func (CharAtExpr) exprNode()       {}
 
@@ -325,6 +345,7 @@ func (e TupleAccessExpr) GetPos() token.Pos  { return e.Pos }
 func (e RecordExpr) GetPos() token.Pos       { return e.Pos }
 func (e RecordAccessExpr) GetPos() token.Pos { return e.Pos }
 func (e ForExpr) GetPos() token.Pos          { return e.Pos }
+func (e TypeDecl) GetPos() token.Pos         { return e.Pos }
 func (e LengthExpr) GetPos() token.Pos       { return e.Pos }
 func (e CharAtExpr) GetPos() token.Pos       { return e.Pos }
 

@@ -153,6 +153,80 @@ func TestParsePostfixChain(t *testing.T) {
 	_ = fstExpr
 }
 
+// --- ADT tests ---
+
+func TestParseTypeDecl(t *testing.T) {
+	prog := parseProgram(t, `type Color = Red | Green | Blue;`)
+	require.Len(t, prog.Declarations, 1)
+	td, ok := prog.Declarations[0].(*ast.TypeDecl)
+	require.True(t, ok, "expected TypeDecl, got %T", prog.Declarations[0])
+	assert.Equal(t, "Color", td.Name)
+	require.Len(t, td.Variants, 3)
+	assert.Equal(t, "Red", td.Variants[0].Name)
+	assert.Nil(t, td.Variants[0].Payload)
+	assert.Equal(t, "Green", td.Variants[1].Name)
+	assert.Equal(t, "Blue", td.Variants[2].Name)
+}
+
+func TestParseTypeDeclWithPayload(t *testing.T) {
+	prog := parseProgram(t, `type Option = None | Some of Int;`)
+	require.Len(t, prog.Declarations, 1)
+	td := prog.Declarations[0].(*ast.TypeDecl)
+	assert.Equal(t, "Option", td.Name)
+	require.Len(t, td.Variants, 2)
+	assert.Equal(t, "None", td.Variants[0].Name)
+	assert.Nil(t, td.Variants[0].Payload)
+	assert.Equal(t, "Some", td.Variants[1].Name)
+	assert.Equal(t, "Int", td.Variants[1].Payload.String())
+}
+
+func TestParseTypeDeclWithPairPayload(t *testing.T) {
+	prog := parseProgram(t, `type Shape = Circle of Int | Rectangle of (Int, Int);`)
+	require.Len(t, prog.Declarations, 1)
+	td := prog.Declarations[0].(*ast.TypeDecl)
+	require.Len(t, td.Variants, 2)
+	assert.Equal(t, "Circle", td.Variants[0].Name)
+	assert.Equal(t, "Int", td.Variants[0].Payload.String())
+	assert.Equal(t, "Rectangle", td.Variants[1].Name)
+	_, ok := td.Variants[1].Payload.(*ast.PairType)
+	assert.True(t, ok, "expected PairType payload, got %T", td.Variants[1].Payload)
+}
+
+func TestParseTypeDeclLeadingPipe(t *testing.T) {
+	prog := parseProgram(t, `type Color = | Red | Green | Blue;`)
+	td := prog.Declarations[0].(*ast.TypeDecl)
+	require.Len(t, td.Variants, 3)
+}
+
+func TestParseADTTypeAnnotation(t *testing.T) {
+	prog := parseProgram(t, `type Option = None | Some of Int; let x : Option = None;`)
+	require.Len(t, prog.Declarations, 2)
+	let := prog.Declarations[1].(*ast.LetExpr)
+	adtT, ok := let.TypeAnn.(*ast.ADTType)
+	require.True(t, ok, "expected ADTType annotation, got %T", let.TypeAnn)
+	assert.Equal(t, "Option", adtT.Name)
+}
+
+func TestParseConstructorPattern(t *testing.T) {
+	prog := parseProgram(t, `type Option = None | Some of Int;
+let x : Option = Some 1;
+case x of | None => 0 | Some n => n;`)
+	require.Len(t, prog.Declarations, 3)
+	caseExpr, ok := prog.Declarations[2].(*ast.CaseExpr)
+	require.True(t, ok, "expected CaseExpr, got %T", prog.Declarations[2])
+	require.Len(t, caseExpr.Branches, 2)
+
+	cp0, ok := caseExpr.Branches[0].Pattern.(*ast.ConstructorPattern)
+	require.True(t, ok, "expected ConstructorPattern, got %T", caseExpr.Branches[0].Pattern)
+	assert.Equal(t, "None", cp0.Constructor)
+	assert.Equal(t, "", cp0.Arg)
+
+	cp1, ok := caseExpr.Branches[1].Pattern.(*ast.ConstructorPattern)
+	require.True(t, ok, "expected ConstructorPattern, got %T", caseExpr.Branches[1].Pattern)
+	assert.Equal(t, "Some", cp1.Constructor)
+	assert.Equal(t, "n", cp1.Arg)
+}
+
 func TestParseForMissingEnd(t *testing.T) {
 	toks, err := lexer.New("for i = 0 to 5 do i").Tokenize()
 	require.NoError(t, err)

@@ -1,0 +1,5 @@
+// ADTs type errors: constructor payloads and pattern branches must match the declared type
+type Option = None | Some of Int;
+
+let invalidOption : Option = Some true;
+

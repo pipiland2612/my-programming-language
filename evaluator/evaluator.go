@@ -28,6 +28,15 @@ type RecordFieldVal struct {
 	Value Value
 }
 
+type ConstructorVal struct {
+	Tag   string
+	Value Value // nil for nullary constructors
+}
+
+type ConstructorFnVal struct {
+	Tag string
+}
+
 type ClosureVal struct {
 	Param string
 	Body  ast.Expr
@@ -41,7 +50,14 @@ func (v UnitVal) String() string    { return "()" }
 func (v PairVal) String() string    { return fmt.Sprintf("(%s, %s)", v.First.String(), v.Second.String()) }
 func (v InlVal) String() string     { return fmt.Sprintf("inl %s", v.Value.String()) }
 func (v InrVal) String() string     { return fmt.Sprintf("inr %s", v.Value.String()) }
-func (v ClosureVal) String() string { return "<function>" }
+func (v ConstructorVal) String() string {
+	if v.Value == nil {
+		return v.Tag
+	}
+	return v.Tag + " " + v.Value.String()
+}
+func (v ConstructorFnVal) String() string { return v.Tag }
+func (v ClosureVal) String() string       { return "<function>" }
 func (v TupleVal) String() string {
 	parts := make([]string, len(v.Elems))
 	for i, e := range v.Elems {
@@ -131,6 +147,9 @@ func (ev *Evaluator) EvalProgram(prog *ast.Program) (Value, error) {
 		switch d := decl.(type) {
 		case *ast.ImportExpr:
 			continue // handled externally
+		case *ast.TypeDecl:
+			ev.evalTypeDecl(d)
+			continue
 		case *ast.LetExpr:
 			if d.Body != nil {
 				v, err := ev.eval(d, ev.env)
@@ -220,13 +239,16 @@ func (ev *Evaluator) eval(expr ast.Expr, env *Env) (Value, error) {
 		if err != nil {
 			return nil, err
 		}
-		closure, ok := funcV.(*ClosureVal)
-		if !ok {
+		switch fn := funcV.(type) {
+		case *ClosureVal:
+			appEnv := NewEnv(fn.Env)
+			appEnv.Set(fn.Param, argV)
+			return ev.eval(fn.Body, appEnv)
+		case *ConstructorFnVal:
+			return &ConstructorVal{Tag: fn.Tag, Value: argV}, nil
+		default:
 			return nil, errAt(e.Pos, fmt.Sprintf("cannot apply non-function value: %s", funcV.String()))
 		}
-		appEnv := NewEnv(closure.Env)
-		appEnv.Set(closure.Param, argV)
-		return ev.eval(closure.Body, appEnv)
 
 	case *ast.PairExpr:
 		fstV, err := ev.eval(e.First, env)
@@ -316,6 +338,10 @@ func (ev *Evaluator) eval(expr ast.Expr, env *Env) (Value, error) {
 		return &UnitVal{}, nil
 
 	case *ast.ImportExpr:
+		return &UnitVal{}, nil
+
+	case *ast.TypeDecl:
+		ev.evalTypeDecl(e)
 		return &UnitVal{}, nil
 
 	case *ast.TupleExpr:
@@ -534,6 +560,13 @@ func (ev *Evaluator) evalCase(e *ast.CaseExpr, env *Env) (Value, error) {
 				branchEnv.Set(p.Name, inr.Value)
 				return ev.eval(branch.Body, branchEnv)
 			}
+		case *ast.ConstructorPattern:
+			if cv, ok := scrutV.(*ConstructorVal); ok && cv.Tag == p.Constructor {
+				if p.Arg != "" && cv.Value != nil {
+					branchEnv.Set(p.Arg, cv.Value)
+				}
+				return ev.eval(branch.Body, branchEnv)
+			}
 		}
 	}
 
@@ -558,6 +591,18 @@ func (ev *Evaluator) evalFix(e *ast.FixExpr, env *Env) (Value, error) {
 	// Now set the self-reference so f points to the result
 	fixEnv.Set(closure.Param, result)
 	return result, nil
+}
+
+func (ev *Evaluator) evalTypeDecl(td *ast.TypeDecl) {
+	for _, v := range td.Variants {
+		if v.Payload == nil {
+			// Nullary constructor: register as a value
+			ev.env.Set(v.Name, &ConstructorVal{Tag: v.Name, Value: nil})
+		} else {
+			// Unary constructor: register as a constructor function
+			ev.env.Set(v.Name, &ConstructorFnVal{Tag: v.Name})
+		}
+	}
 }
 
 func valuesEqual(a, b Value) bool {
@@ -616,6 +661,19 @@ func valuesEqual(a, b Value) bool {
 				}
 			}
 			return true
+		}
+	case *ConstructorVal:
+		if b, ok := b.(*ConstructorVal); ok {
+			if a.Tag != b.Tag {
+				return false
+			}
+			if a.Value == nil && b.Value == nil {
+				return true
+			}
+			if a.Value == nil || b.Value == nil {
+				return false
+			}
+			return valuesEqual(a.Value, b.Value)
 		}
 	}
 	return false

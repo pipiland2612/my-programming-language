@@ -226,6 +226,121 @@ func TestCheckTupleTypeEquality(t *testing.T) {
 	require.NoError(t, chk.CheckProgram(prog))
 }
 
+// --- ADT tests ---
+
+func mustCheckProgram(t *testing.T, src string) *Checker {
+	t.Helper()
+	toks, err := lexer.New(src).Tokenize()
+	require.NoError(t, err)
+	prog, err := parser.New(toks).ParseProgram()
+	require.NoError(t, err)
+	chk := New()
+	require.NoError(t, chk.CheckProgram(prog))
+	return chk
+}
+
+func mustFailCheckProgram(t *testing.T, src string) error {
+	t.Helper()
+	toks, err := lexer.New(src).Tokenize()
+	require.NoError(t, err)
+	prog, err := parser.New(toks).ParseProgram()
+	require.NoError(t, err)
+	chk := New()
+	err = chk.CheckProgram(prog)
+	require.Error(t, err)
+	return err
+}
+
+func TestCheckADTNullaryConstructor(t *testing.T) {
+	chk := mustCheckProgram(t, `type Color = Red | Green | Blue; let c : Color = Red;`)
+	typ, ok := chk.Env().Get("c")
+	require.True(t, ok)
+	assert.Equal(t, "Color", typ.String())
+}
+
+func TestCheckADTUnaryConstructor(t *testing.T) {
+	chk := mustCheckProgram(t, `type Option = None | Some of Int; let x : Option = Some 42;`)
+	typ, ok := chk.Env().Get("x")
+	require.True(t, ok)
+	assert.Equal(t, "Option", typ.String())
+}
+
+func TestCheckADTConstructorTypeError(t *testing.T) {
+	err := mustFailCheckProgram(t, `type Option = None | Some of Int; let x : Option = Some true;`)
+	assert.Contains(t, err.Error(), "type error")
+}
+
+func TestCheckADTPatternMatch(t *testing.T) {
+	chk := mustCheckProgram(t, `
+type Option = None | Some of Int;
+let getValue : Option -> Int = fn (opt : Option) =>
+  case opt of
+    | None => 0
+    | Some n => n;
+`)
+	typ, ok := chk.Env().Get("getValue")
+	require.True(t, ok)
+	assert.Equal(t, "Option -> Int", typ.String())
+}
+
+func TestCheckADTPatternMatchBranchTypeMismatch(t *testing.T) {
+	err := mustFailCheckProgram(t, `
+type Option = None | Some of Int;
+let getValue : Option -> Int = fn (opt : Option) =>
+  case opt of
+    | None => 0
+    | Some n => true;
+`)
+	assert.Contains(t, err.Error(), "case branches must have same type")
+}
+
+func TestCheckADTUnknownConstructorInPattern(t *testing.T) {
+	err := mustFailCheckProgram(t, `
+type Option = None | Some of Int;
+let f : Option -> Int = fn (opt : Option) =>
+  case opt of
+    | None => 0
+    | Foo n => n;
+`)
+	assert.Contains(t, err.Error(), "not a variant")
+}
+
+func TestCheckADTMissingArgInPattern(t *testing.T) {
+	err := mustFailCheckProgram(t, `
+type Option = None | Some of Int;
+let f : Option -> Int = fn (opt : Option) =>
+  case opt of
+    | None => 0
+    | Some => 1;
+`)
+	assert.Contains(t, err.Error(), "expects an argument")
+}
+
+func TestCheckADTExtraArgInPattern(t *testing.T) {
+	err := mustFailCheckProgram(t, `
+type Color = Red | Green | Blue;
+let f : Color -> Int = fn (c : Color) =>
+  case c of
+    | Red x => 0
+    | Green => 1
+    | Blue => 2;
+`)
+	assert.Contains(t, err.Error(), "takes no arguments")
+}
+
+func TestCheckADTRecursiveType(t *testing.T) {
+	mustCheckProgram(t, `
+type Expr = Lit of Int | Neg of Expr;
+let e : Expr = Neg (Lit 5);
+`)
+}
+
+func TestCheckADTTypeEquality(t *testing.T) {
+	assert.True(t, typesEqual(&ast.ADTType{Name: "Foo"}, &ast.ADTType{Name: "Foo"}))
+	assert.False(t, typesEqual(&ast.ADTType{Name: "Foo"}, &ast.ADTType{Name: "Bar"}))
+	assert.False(t, typesEqual(&ast.ADTType{Name: "Foo"}, &ast.IntType{}))
+}
+
 func TestCheckRecordTypeEquality(t *testing.T) {
 	toks, err := lexer.New(`let r : {x: Int, y: Bool} = {x = 1, y = true};`).Tokenize()
 	require.NoError(t, err)
