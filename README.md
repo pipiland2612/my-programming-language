@@ -4,9 +4,29 @@ MEPL is a statically-typed functional programming language with an interactive R
 
 ## Getting Started
 
-### Prerequisites
+### Running with Docker
 
-- **Go 1.25** or later
+If you do not have Go installed locally, you can still build and run MEPL using Docker alone.
+
+```bash
+
+docker build -t mepl .
+docker run --rm mepl examples/integers.mepl
+```
+
+```bash
+# Using REPL mode
+docker run --rm -it mepl   # REPL mode
+```
+
+### Running with Go
+Required **Go 1.25** or later
+
+### Quick Start
+```bash
+# Build and run directly
+go build -o mepl . && ./mepl examples/integers.mepl
+```
 
 ### Building
 
@@ -34,18 +54,6 @@ go run . examples/integers.mepl
 
 # Load a file and then enter the REPL (all declarations available)
 ./mepl examples/declarations.mepl -i
-```
-
-### Running on Linux / Docker
-
-```bash
-# Build and run directly
-go build -o mepl . && ./mepl examples/integers.mepl
-
-# Or with Docker
-docker build -t mepl .
-docker run --rm mepl examples/integers.mepl
-docker run --rm -it mepl   # REPL mode
 ```
 
 ### Running Tests
@@ -225,7 +233,7 @@ All examples are in the `examples/` directory. For each feature, there is a work
 
 | Feature | Working Example | Type Error Example |
 |---------|----------------|-------------------|
-| Variables | `variables.mepl` | — |
+| Variables | `variables.mepl` | `variables-errors.mepl` |
 | Integers | `integers.mepl` | `integers-errors.mepl` |
 | Booleans | `booleans.mepl` | `booleans-errors.mepl` |
 | Functions | `functions.mepl` | `functions-errors.mepl` |
@@ -234,10 +242,10 @@ All examples are in the `examples/` directory. For each feature, there is a work
 | Sums | `sums.mepl` | `sums-errors.mepl` |
 | Recursion | `recursion.mepl` | `recursion-errors.mepl` |
 | Declarations | `declarations.mepl` | `declarations-errors.mepl` |
-| Imports | `imports.mepl` | — |
-| Comments | `comments.mepl` | — |
-| Printing | `printing.mepl` | — |
+| Imports | `imports.mepl` | `imports-errors.mepl` |
+| Comments | `comments.mepl` | `comments-errors.mepl` |
+| Printing | `printing.mepl` | `printing-errors.mepl` |
 | Tuples | `tuples.mepl` | `tuples-errors.mepl` |
 | Strings | `strings.mepl` | `strings-errors.mepl` |
 | Records | `records.mepl` | `records-errors.mepl` |
-| Loops | `loops.mepl` | — |
+| Loops | `loops.mepl` | `loops-errors.mepl` |

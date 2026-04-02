@@ -135,11 +135,12 @@ func TestCLI_AllExamplesRun(t *testing.T) {
 func TestCLI_AllErrorExamplesReject(t *testing.T) {
 	// Verify every error example fails with a type error
 	examples := []string{
-		"integers-errors.mepl", "booleans-errors.mepl",
+		"variables-errors.mepl", "integers-errors.mepl", "booleans-errors.mepl",
 		"functions-errors.mepl", "pairs-errors.mepl",
 		"lists-errors.mepl", "sums-errors.mepl",
 		"recursion-errors.mepl", "declarations-errors.mepl",
-		"strings-errors.mepl", "tuples-errors.mepl", "records-errors.mepl",
+		"imports-errors.mepl", "comments-errors.mepl", "printing-errors.mepl",
+		"strings-errors.mepl", "tuples-errors.mepl", "records-errors.mepl", "loops-errors.mepl",
 	}
 	for _, ex := range examples {
 		t.Run(ex, func(t *testing.T) {

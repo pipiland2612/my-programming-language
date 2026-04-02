@@ -1,0 +1,2 @@
+// Printing type errors: print returns Unit, not the printed value's type
+let bad : Int = print 42

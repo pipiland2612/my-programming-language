@@ -1,0 +1,8 @@
+// Comments type errors: comments should be ignored, but surrounding code is still type checked
+
+/* This block comment should not affect parsing:
+   let ignored : Int = 999;
+*/
+
+let x : Int = 42; // valid code before the error
+let bad : Int = true

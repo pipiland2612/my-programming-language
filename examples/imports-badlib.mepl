@@ -1,0 +1,2 @@
+// Helper file for import error example
+let broken : Int = true

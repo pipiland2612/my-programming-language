@@ -1,0 +1,3 @@
+// Imports type errors: imported files are type checked before evaluation
+import "imports-badlib.mepl";
+println 42

@@ -1,0 +1,4 @@
+// Loops type errors: loop bounds must be integers
+for i = true to 5 do
+  println i
+end
