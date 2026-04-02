@@ -29,7 +29,7 @@ func runCLI(t *testing.T, args ...string) (string, string, error) {
 	return stdout, stderr, err
 }
 
-func TestCLI_PrintingExample_BlackBox(t *testing.T) {
+func TestCLI_PrintingExample(t *testing.T) {
 	stdout, stderr, err := runCLI(t, filepath.Join("examples", "printing.mepl"))
 	require.NoError(t, err, "expected success; stderr:\n%s", stderr)
 
@@ -53,14 +53,14 @@ func TestCLI_PrintingExample_BlackBox(t *testing.T) {
 	require.Empty(t, stderr)
 }
 
-func TestCLI_TypeErrorExample_BlackBox(t *testing.T) {
+func TestCLI_TypeErrorExample(t *testing.T) {
 	_, stderr, err := runCLI(t, filepath.Join("examples", "integers-errors.mepl"))
 	require.Error(t, err, "expected non-zero exit for type error example")
 	require.Contains(t, stderr, "type error")
 	require.Contains(t, stderr, "operator '+' expects Int")
 }
 
-func TestCLI_TuplesExample_BlackBox(t *testing.T) {
+func TestCLI_TuplesExample(t *testing.T) {
 	stdout, stderr, err := runCLI(t, filepath.Join("examples", "tuples.mepl"))
 	require.NoError(t, err, "expected success; stderr:\n%s", stderr)
 
@@ -70,14 +70,14 @@ func TestCLI_TuplesExample_BlackBox(t *testing.T) {
 	require.Contains(t, stdout, "40\n")
 }
 
-func TestCLI_TuplesErrorExample_BlackBox(t *testing.T) {
+func TestCLI_TuplesErrorExample(t *testing.T) {
 	_, stderr, err := runCLI(t, filepath.Join("examples", "tuples-errors.mepl"))
 	require.Error(t, err, "expected non-zero exit for type error")
 	require.Contains(t, stderr, "type error")
 	require.Contains(t, stderr, "out of bounds")
 }
 
-func TestCLI_RecordsExample_BlackBox(t *testing.T) {
+func TestCLI_RecordsExample(t *testing.T) {
 	stdout, stderr, err := runCLI(t, filepath.Join("examples", "records.mepl"))
 	require.NoError(t, err, "expected success; stderr:\n%s", stderr)
 
@@ -87,14 +87,14 @@ func TestCLI_RecordsExample_BlackBox(t *testing.T) {
 	require.Contains(t, stdout, "on\n")
 }
 
-func TestCLI_RecordsErrorExample_BlackBox(t *testing.T) {
+func TestCLI_RecordsErrorExample(t *testing.T) {
 	_, stderr, err := runCLI(t, filepath.Join("examples", "records-errors.mepl"))
 	require.Error(t, err, "expected non-zero exit for type error")
 	require.Contains(t, stderr, "type error")
 	require.Contains(t, stderr, "no field")
 }
 
-func TestCLI_LoopsExample_BlackBox(t *testing.T) {
+func TestCLI_LoopsExample(t *testing.T) {
 	stdout, stderr, err := runCLI(t, filepath.Join("examples", "loops.mepl"))
 	require.NoError(t, err, "expected success; stderr:\n%s", stderr)
 
@@ -104,18 +104,18 @@ func TestCLI_LoopsExample_BlackBox(t *testing.T) {
 	require.Contains(t, stdout, "1\n4\n9\n16\n25\n")
 }
 
-func TestCLI_StringsExample_BlackBox(t *testing.T) {
+func TestCLI_StringsExample(t *testing.T) {
 	stdout, stderr, err := runCLI(t, filepath.Join("examples", "strings.mepl"))
 	require.NoError(t, err, "expected success; stderr:\n%s", stderr)
 
 	require.Contains(t, stdout, "Hello, World!")
-	require.Contains(t, stdout, "5\n")  // length
-	require.Contains(t, stdout, "H\n")  // charAt 0
-	require.Contains(t, stdout, "o\n")  // charAt 4
+	require.Contains(t, stdout, "5\n") // length
+	require.Contains(t, stdout, "H\n") // charAt 0
+	require.Contains(t, stdout, "o\n") // charAt 4
 	require.Contains(t, stdout, "MEPL\n")
 }
 
-func TestCLI_AllExamplesRun_BlackBox(t *testing.T) {
+func TestCLI_AllExamplesRun(t *testing.T) {
 	// Verify every non-error example runs without error
 	examples := []string{
 		"variables.mepl", "integers.mepl", "booleans.mepl",
@@ -132,7 +132,7 @@ func TestCLI_AllExamplesRun_BlackBox(t *testing.T) {
 	}
 }
 
-func TestCLI_AllErrorExamplesReject_BlackBox(t *testing.T) {
+func TestCLI_AllErrorExamplesReject(t *testing.T) {
 	// Verify every error example fails with a type error
 	examples := []string{
 		"integers-errors.mepl", "booleans-errors.mepl",
