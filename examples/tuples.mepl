@@ -1,0 +1,26 @@
+// Tuples: n-ary tuples (3+ elements)
+
+// Construct a tuple
+let t : (Int, Bool, String) = (1, true, "hello")
+println t;
+
+// Access tuple elements by index
+println t.0;
+println t.1;
+println t.2;
+
+// Tuple with 4 elements
+let quad = (10, 20, 30, 40)
+println quad;
+println quad.3;
+
+// Nested tuple
+let nested = ((1, 2, 3), (true, false, true))
+println nested;
+println nested.0;
+
+// Tuple in a let binding
+let x = t.0
+let y = t.2
+println (x + 10);
+println y

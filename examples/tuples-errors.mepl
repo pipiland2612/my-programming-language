@@ -1,0 +1,3 @@
+// Tuples type error: accessing out of bounds index
+let t : (Int, Bool, String) = (1, true, "hello")
+let bad = t.5

@@ -61,6 +61,12 @@ const (
 	IMPORT
 	PRINT
 	PRINTLN
+	FOR
+	TO
+	DO
+	END
+	LENGTH
+	CHARAT
 
 	// Type keywords
 	INT_TYPE
@@ -89,6 +95,8 @@ var tokenNames = map[TokenType]string{
 	FN: "fn", FIX: "fix", FST: "fst", SND: "snd",
 	INL: "inl", INR: "inr", CASE: "case", OF: "of",
 	IMPORT: "import", PRINT: "print", PRINTLN: "println",
+	FOR: "for", TO: "to", DO: "do", END: "end",
+	LENGTH: "length", CHARAT: "charAt",
 	INT_TYPE: "Int", BOOL_TYPE: "Bool", STRING_TYPE: "String", UNIT_TYPE: "Unit",
 	EOF: "EOF", ILLEGAL: "ILLEGAL",
 }
@@ -119,6 +127,12 @@ var Keywords = map[string]TokenType{
 	"import":  IMPORT,
 	"print":   PRINT,
 	"println": PRINTLN,
+	"for":     FOR,
+	"to":      TO,
+	"do":      DO,
+	"end":     END,
+	"length":  LENGTH,
+	"charAt":  CHARAT,
 	"Int":     INT_TYPE,
 	"Bool":    BOOL_TYPE,
 	"String":  STRING_TYPE,

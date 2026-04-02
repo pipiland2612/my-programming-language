@@ -19,6 +19,16 @@ println same;
 let diff : Bool = "hello" != "world";
 println diff;
 
+// String length
+let len : Int = length "Hello";
+println len;
+
+// Character access
+let first : String = charAt "Hello" 0;
+println first;
+let last : String = charAt "Hello" 4;
+println last;
+
 // String in if-then-else
 let lang : String = if true then "MEPL" else "other";
 println lang

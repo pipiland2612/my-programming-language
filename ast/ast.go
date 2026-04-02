@@ -1,6 +1,9 @@
 package ast
 
-import "my-programming-language/token"
+import (
+	"my-programming-language/token"
+	"strings"
+)
 
 // Types
 
@@ -17,6 +20,12 @@ type FuncType struct{ Param, Return Type }
 type PairType struct{ First, Second Type }
 type ListType struct{ Elem Type }
 type SumType struct{ Left, Right Type }
+type TupleType struct{ Elems []Type }
+type RecordType struct{ Fields []RecordFieldType }
+type RecordFieldType struct {
+	Name string
+	Type Type
+}
 
 func (IntType) typeNode()    {}
 func (BoolType) typeNode()   {}
@@ -26,6 +35,8 @@ func (FuncType) typeNode()   {}
 func (PairType) typeNode()   {}
 func (ListType) typeNode()   {}
 func (SumType) typeNode()    {}
+func (TupleType) typeNode()  {}
+func (RecordType) typeNode() {}
 
 func (IntType) String() string    { return "Int" }
 func (BoolType) String() string   { return "Bool" }
@@ -40,7 +51,21 @@ func (t FuncType) String() string {
 }
 func (t PairType) String() string { return "(" + t.First.String() + ", " + t.Second.String() + ")" }
 func (t ListType) String() string { return "[" + t.Elem.String() + "]" }
-func (t SumType) String() string  { return t.Left.String() + " + " + t.Right.String() }
+func (t SumType) String() string { return t.Left.String() + " + " + t.Right.String() }
+func (t TupleType) String() string {
+	parts := make([]string, len(t.Elems))
+	for i, e := range t.Elems {
+		parts[i] = e.String()
+	}
+	return "(" + strings.Join(parts, ", ") + ")"
+}
+func (t RecordType) String() string {
+	parts := make([]string, len(t.Fields))
+	for i, f := range t.Fields {
+		parts[i] = f.Name + ": " + f.Type.String()
+	}
+	return "{" + strings.Join(parts, ", ") + "}"
+}
 
 // Expressions
 
@@ -195,6 +220,52 @@ type ImportExpr struct {
 	Pos  token.Pos
 }
 
+type TupleExpr struct {
+	Elems []Expr
+	Pos   token.Pos
+}
+
+type TupleAccessExpr struct {
+	Tuple Expr
+	Index int
+	Pos   token.Pos
+}
+
+type RecordExpr struct {
+	Fields []RecordField
+	Pos    token.Pos
+}
+
+type RecordField struct {
+	Name  string
+	Value Expr
+}
+
+type RecordAccessExpr struct {
+	Record Expr
+	Field  string
+	Pos    token.Pos
+}
+
+type ForExpr struct {
+	Var   string
+	Start Expr
+	End   Expr
+	Body  Expr
+	Pos   token.Pos
+}
+
+type LengthExpr struct {
+	Expr Expr
+	Pos  token.Pos
+}
+
+type CharAtExpr struct {
+	Str   Expr
+	Index Expr
+	Pos   token.Pos
+}
+
 // exprNode implementations
 func (IntLit) exprNode()    {}
 func (BoolLit) exprNode()   {}
@@ -216,8 +287,15 @@ func (InlExpr) exprNode()   {}
 func (InrExpr) exprNode()   {}
 func (CaseExpr) exprNode()  {}
 func (FixExpr) exprNode()   {}
-func (PrintExpr) exprNode() {}
-func (ImportExpr) exprNode() {}
+func (PrintExpr) exprNode()        {}
+func (ImportExpr) exprNode()       {}
+func (TupleExpr) exprNode()        {}
+func (TupleAccessExpr) exprNode()  {}
+func (RecordExpr) exprNode()       {}
+func (RecordAccessExpr) exprNode() {}
+func (ForExpr) exprNode()          {}
+func (LengthExpr) exprNode()       {}
+func (CharAtExpr) exprNode()       {}
 
 // GetPos implementations
 func (e IntLit) GetPos() token.Pos    { return e.Pos }
@@ -240,8 +318,15 @@ func (e InlExpr) GetPos() token.Pos   { return e.Pos }
 func (e InrExpr) GetPos() token.Pos   { return e.Pos }
 func (e CaseExpr) GetPos() token.Pos  { return e.Pos }
 func (e FixExpr) GetPos() token.Pos   { return e.Pos }
-func (e PrintExpr) GetPos() token.Pos { return e.Pos }
-func (e ImportExpr) GetPos() token.Pos { return e.Pos }
+func (e PrintExpr) GetPos() token.Pos        { return e.Pos }
+func (e ImportExpr) GetPos() token.Pos       { return e.Pos }
+func (e TupleExpr) GetPos() token.Pos        { return e.Pos }
+func (e TupleAccessExpr) GetPos() token.Pos  { return e.Pos }
+func (e RecordExpr) GetPos() token.Pos       { return e.Pos }
+func (e RecordAccessExpr) GetPos() token.Pos { return e.Pos }
+func (e ForExpr) GetPos() token.Pos          { return e.Pos }
+func (e LengthExpr) GetPos() token.Pos       { return e.Pos }
+func (e CharAtExpr) GetPos() token.Pos       { return e.Pos }
 
 // Program is a list of top-level declarations
 type Program struct {

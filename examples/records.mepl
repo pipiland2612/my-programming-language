@@ -1,0 +1,26 @@
+// Records: construction and field access
+
+// Construct a record
+let person : {name: String, age: Int} = {name = "Alice", age = 30}
+println person;
+
+// Access fields
+println person.name;
+println person.age;
+
+// Record with boolean field
+let config = {debug = true, maxRetries = 3, label = "prod"}
+println config;
+println config.debug;
+println config.maxRetries;
+println config.label;
+
+// Nested record
+let point = {x = 1, y = 2}
+let rect = {origin = point, width = 10, height = 5}
+println rect;
+println rect.origin;
+
+// Record in if-then-else
+let active = if true then {status = "on"} else {status = "off"}
+println active.status

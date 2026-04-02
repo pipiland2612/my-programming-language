@@ -49,3 +49,189 @@ func TestCheckProgramPopulatesEnvironment(t *testing.T) {
 	require.True(t, ok, "expected y in environment")
 	require.Equal(t, "Int", tpe.String())
 }
+
+// --- Tuple tests ---
+
+func TestCheckTupleExpr(t *testing.T) {
+	expr := mustParseExpr(t, `(1, true, "hi")`)
+	chk := New()
+	typ, err := chk.Check(expr)
+	require.NoError(t, err)
+	assert.Equal(t, `(Int, Bool, String)`, typ.String())
+}
+
+func TestCheckTupleAccess(t *testing.T) {
+	expr := mustParseExpr(t, `let t = (1, true, "hi") in t.2`)
+	chk := New()
+	typ, err := chk.Check(expr)
+	require.NoError(t, err)
+	assert.Equal(t, "String", typ.String())
+}
+
+func TestCheckTupleAccessOutOfBounds(t *testing.T) {
+	expr := mustParseExpr(t, `let t = (1, true, "hi") in t.5`)
+	chk := New()
+	_, err := chk.Check(expr)
+	require.Error(t, err)
+	assert.Contains(t, err.Error(), "out of bounds")
+}
+
+func TestCheckTupleAccessOnPair(t *testing.T) {
+	expr := mustParseExpr(t, `let p = (1, true) in p.0`)
+	chk := New()
+	typ, err := chk.Check(expr)
+	require.NoError(t, err)
+	assert.Equal(t, "Int", typ.String())
+}
+
+func TestCheckTupleAccessOnNonTuple(t *testing.T) {
+	expr := mustParseExpr(t, `let x = 42 in x.0`)
+	chk := New()
+	_, err := chk.Check(expr)
+	require.Error(t, err)
+	assert.Contains(t, err.Error(), "expects a tuple or pair")
+}
+
+// --- Record tests ---
+
+func TestCheckRecordExpr(t *testing.T) {
+	expr := mustParseExpr(t, `{x = 1, y = true}`)
+	chk := New()
+	typ, err := chk.Check(expr)
+	require.NoError(t, err)
+	assert.Equal(t, "{x: Int, y: Bool}", typ.String())
+}
+
+func TestCheckRecordAccess(t *testing.T) {
+	expr := mustParseExpr(t, `let r = {name = "Alice", age = 30} in r.age`)
+	chk := New()
+	typ, err := chk.Check(expr)
+	require.NoError(t, err)
+	assert.Equal(t, "Int", typ.String())
+}
+
+func TestCheckRecordAccessMissingField(t *testing.T) {
+	expr := mustParseExpr(t, `let r = {x = 1} in r.y`)
+	chk := New()
+	_, err := chk.Check(expr)
+	require.Error(t, err)
+	assert.Contains(t, err.Error(), "no field 'y'")
+}
+
+func TestCheckRecordAccessOnNonRecord(t *testing.T) {
+	expr := mustParseExpr(t, `let x = 42 in x.foo`)
+	chk := New()
+	_, err := chk.Check(expr)
+	require.Error(t, err)
+	assert.Contains(t, err.Error(), "expects a record")
+}
+
+// --- For loop tests ---
+
+func TestCheckForExpr(t *testing.T) {
+	expr := mustParseExpr(t, `for i = 0 to 10 do i end`)
+	chk := New()
+	typ, err := chk.Check(expr)
+	require.NoError(t, err)
+	assert.Equal(t, "Unit", typ.String())
+}
+
+func TestCheckForExprNonIntStart(t *testing.T) {
+	expr := mustParseExpr(t, `for i = true to 10 do i end`)
+	chk := New()
+	_, err := chk.Check(expr)
+	require.Error(t, err)
+	assert.Contains(t, err.Error(), "start must be Int")
+}
+
+func TestCheckForExprNonIntEnd(t *testing.T) {
+	expr := mustParseExpr(t, `for i = 0 to "hi" do i end`)
+	chk := New()
+	_, err := chk.Check(expr)
+	require.Error(t, err)
+	assert.Contains(t, err.Error(), "end must be Int")
+}
+
+func TestCheckForExprBodyUsesLoopVar(t *testing.T) {
+	// The loop variable should be typed as Int inside the body
+	expr := mustParseExpr(t, `for i = 0 to 5 do i + 1 end`)
+	chk := New()
+	typ, err := chk.Check(expr)
+	require.NoError(t, err)
+	assert.Equal(t, "Unit", typ.String())
+}
+
+// --- Length tests ---
+
+func TestCheckLengthString(t *testing.T) {
+	expr := mustParseExpr(t, `length "hello"`)
+	chk := New()
+	typ, err := chk.Check(expr)
+	require.NoError(t, err)
+	assert.Equal(t, "Int", typ.String())
+}
+
+func TestCheckLengthList(t *testing.T) {
+	expr := mustParseExpr(t, `length [1, 2, 3]`)
+	chk := New()
+	typ, err := chk.Check(expr)
+	require.NoError(t, err)
+	assert.Equal(t, "Int", typ.String())
+}
+
+func TestCheckLengthOnInt(t *testing.T) {
+	expr := mustParseExpr(t, `length 42`)
+	chk := New()
+	_, err := chk.Check(expr)
+	require.Error(t, err)
+	assert.Contains(t, err.Error(), "expects a String or List")
+}
+
+// --- CharAt tests ---
+
+func TestCheckCharAt(t *testing.T) {
+	expr := mustParseExpr(t, `charAt "hello" 0`)
+	chk := New()
+	typ, err := chk.Check(expr)
+	require.NoError(t, err)
+	assert.Equal(t, "String", typ.String())
+}
+
+func TestCheckCharAtNonString(t *testing.T) {
+	expr := mustParseExpr(t, `charAt 42 0`)
+	chk := New()
+	_, err := chk.Check(expr)
+	require.Error(t, err)
+	assert.Contains(t, err.Error(), "expects a String")
+}
+
+func TestCheckCharAtNonIntIndex(t *testing.T) {
+	expr := mustParseExpr(t, `charAt "hello" true`)
+	chk := New()
+	_, err := chk.Check(expr)
+	require.Error(t, err)
+	assert.Contains(t, err.Error(), "index must be Int")
+}
+
+// --- typesEqual for new types ---
+
+func TestCheckTupleTypeEquality(t *testing.T) {
+	// Two tuples with same structure should match in type annotation
+	toks, err := lexer.New(`let t : (Int, Bool, String) = (1, true, "x");`).Tokenize()
+	require.NoError(t, err)
+	prog, err := parser.New(toks).ParseProgram()
+	require.NoError(t, err)
+
+	chk := New()
+	require.NoError(t, chk.CheckProgram(prog))
+}
+
+func TestCheckRecordTypeEquality(t *testing.T) {
+	toks, err := lexer.New(`let r : {x: Int, y: Bool} = {x = 1, y = true};`).Tokenize()
+	require.NoError(t, err)
+	prog, err := parser.New(toks).ParseProgram()
+	require.NoError(t, err)
+
+	chk := New()
+	require.NoError(t, chk.CheckProgram(prog))
+}

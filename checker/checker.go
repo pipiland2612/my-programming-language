@@ -75,6 +75,28 @@ func typesEqual(a, b ast.Type) bool {
 	case *ast.SumType:
 		b, ok := b.(*ast.SumType)
 		return ok && typesEqual(a.Left, b.Left) && typesEqual(a.Right, b.Right)
+	case *ast.TupleType:
+		b, ok := b.(*ast.TupleType)
+		if !ok || len(a.Elems) != len(b.Elems) {
+			return false
+		}
+		for i := range a.Elems {
+			if !typesEqual(a.Elems[i], b.Elems[i]) {
+				return false
+			}
+		}
+		return true
+	case *ast.RecordType:
+		b, ok := b.(*ast.RecordType)
+		if !ok || len(a.Fields) != len(b.Fields) {
+			return false
+		}
+		for i := range a.Fields {
+			if a.Fields[i].Name != b.Fields[i].Name || !typesEqual(a.Fields[i].Type, b.Fields[i].Type) {
+				return false
+			}
+		}
+		return true
 	}
 	return false
 }
@@ -353,6 +375,118 @@ func (c *Checker) check(expr ast.Expr, env *TypeEnv) (ast.Type, error) {
 
 	case *ast.ImportExpr:
 		return &ast.UnitType{}, nil
+
+	case *ast.TupleExpr:
+		elems := make([]ast.Type, len(e.Elems))
+		for i, elem := range e.Elems {
+			t, err := c.check(elem, env)
+			if err != nil {
+				return nil, err
+			}
+			elems[i] = t
+		}
+		return &ast.TupleType{Elems: elems}, nil
+
+	case *ast.TupleAccessExpr:
+		t, err := c.check(e.Tuple, env)
+		if err != nil {
+			return nil, err
+		}
+		switch tt := t.(type) {
+		case *ast.TupleType:
+			if e.Index < 0 || e.Index >= len(tt.Elems) {
+				return nil, errAt(e.Pos, fmt.Sprintf("tuple index %d out of bounds for tuple of size %d", e.Index, len(tt.Elems)))
+			}
+			return tt.Elems[e.Index], nil
+		case *ast.PairType:
+			if e.Index == 0 {
+				return tt.First, nil
+			} else if e.Index == 1 {
+				return tt.Second, nil
+			}
+			return nil, errAt(e.Pos, fmt.Sprintf("pair index %d out of bounds (pair has 2 elements)", e.Index))
+		default:
+			return nil, errAt(e.Pos, fmt.Sprintf("index access expects a tuple or pair, got %s", t.String()))
+		}
+
+	case *ast.RecordExpr:
+		fields := make([]ast.RecordFieldType, len(e.Fields))
+		for i, f := range e.Fields {
+			t, err := c.check(f.Value, env)
+			if err != nil {
+				return nil, err
+			}
+			fields[i] = ast.RecordFieldType{Name: f.Name, Type: t}
+		}
+		return &ast.RecordType{Fields: fields}, nil
+
+	case *ast.RecordAccessExpr:
+		t, err := c.check(e.Record, env)
+		if err != nil {
+			return nil, err
+		}
+		rt, ok := t.(*ast.RecordType)
+		if !ok {
+			return nil, errAt(e.Pos, fmt.Sprintf("record access expects a record, got %s", t.String()))
+		}
+		for _, f := range rt.Fields {
+			if f.Name == e.Field {
+				return f.Type, nil
+			}
+		}
+		return nil, errAt(e.Pos, fmt.Sprintf("record has no field '%s'", e.Field))
+
+	case *ast.ForExpr:
+		startT, err := c.check(e.Start, env)
+		if err != nil {
+			return nil, err
+		}
+		if !typesEqual(startT, &ast.IntType{}) {
+			return nil, errAt(e.Pos, fmt.Sprintf("for loop start must be Int, got %s", startT.String()))
+		}
+		endT, err := c.check(e.End, env)
+		if err != nil {
+			return nil, err
+		}
+		if !typesEqual(endT, &ast.IntType{}) {
+			return nil, errAt(e.Pos, fmt.Sprintf("for loop end must be Int, got %s", endT.String()))
+		}
+		bodyEnv := NewTypeEnv(env)
+		bodyEnv.Set(e.Var, &ast.IntType{})
+		_, err = c.check(e.Body, bodyEnv)
+		if err != nil {
+			return nil, err
+		}
+		return &ast.UnitType{}, nil
+
+	case *ast.LengthExpr:
+		t, err := c.check(e.Expr, env)
+		if err != nil {
+			return nil, err
+		}
+		switch t.(type) {
+		case *ast.StringType, *ast.ListType:
+			return &ast.IntType{}, nil
+		default:
+			return nil, errAt(e.Pos, fmt.Sprintf("length expects a String or List, got %s", t.String()))
+		}
+
+	case *ast.CharAtExpr:
+		strT, err := c.check(e.Str, env)
+		if err != nil {
+			return nil, err
+		}
+		if !typesEqual(strT, &ast.StringType{}) {
+			return nil, errAt(e.Pos, fmt.Sprintf("charAt expects a String, got %s", strT.String()))
+		}
+		idxT, err := c.check(e.Index, env)
+		if err != nil {
+			return nil, err
+		}
+		if !typesEqual(idxT, &ast.IntType{}) {
+			return nil, errAt(e.Pos, fmt.Sprintf("charAt index must be Int, got %s", idxT.String()))
+		}
+		return &ast.StringType{}, nil
 
 	default:
 		return nil, fmt.Errorf("unknown expression type: %T", expr)

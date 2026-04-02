@@ -20,6 +20,12 @@ func TestKeywordsMap(t *testing.T) {
 		"println": PRINTLN,
 		"Int":     INT_TYPE,
 		"Bool":    BOOL_TYPE,
+		"for":     FOR,
+		"to":      TO,
+		"do":      DO,
+		"end":     END,
+		"length":  LENGTH,
+		"charAt":  CHARAT,
 	}
 
 	for kw, want := range cases {
@@ -27,6 +33,15 @@ func TestKeywordsMap(t *testing.T) {
 		require.True(t, ok, "keyword %q not found", kw)
 		assert.Equal(t, want, got, "keyword %q mismatch", kw)
 	}
+}
+
+func TestNewKeywordTokenStrings(t *testing.T) {
+	assert.Equal(t, "for", FOR.String())
+	assert.Equal(t, "to", TO.String())
+	assert.Equal(t, "do", DO.String())
+	assert.Equal(t, "end", END.String())
+	assert.Equal(t, "length", LENGTH.String())
+	assert.Equal(t, "charAt", CHARAT.String())
 }
 
 func TestTokenStructFields(t *testing.T) {

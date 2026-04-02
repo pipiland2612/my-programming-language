@@ -56,3 +56,191 @@ func TestEvalRuntimeErrorDivisionByZero(t *testing.T) {
 	require.Error(t, err)
 	require.True(t, strings.Contains(err.Error(), "division by zero"), "unexpected runtime error: %v", err)
 }
+
+func checkAndEval(t *testing.T, src string) Value {
+	t.Helper()
+	expr := mustParseEvalExpr(t, src)
+	chk := checker.New()
+	_, err := chk.Check(expr)
+	require.NoError(t, err)
+	ev := New()
+	val, err := ev.Eval(expr)
+	require.NoError(t, err)
+	return val
+}
+
+func checkAndEvalProgram(t *testing.T, src string) (Value, *Evaluator) {
+	t.Helper()
+	toks, err := lexer.New(src).Tokenize()
+	require.NoError(t, err)
+	prog, err := parser.New(toks).ParseProgram()
+	require.NoError(t, err)
+
+	chk := checker.New()
+	require.NoError(t, chk.CheckProgram(prog))
+
+	ev := New()
+	val, err := ev.EvalProgram(prog)
+	require.NoError(t, err)
+	return val, ev
+}
+
+// --- Tuple tests ---
+
+func TestEvalTupleConstruct(t *testing.T) {
+	val := checkAndEval(t, `(1, true, "hello")`)
+	tup, ok := val.(*TupleVal)
+	require.True(t, ok, "expected TupleVal, got %T", val)
+	require.Len(t, tup.Elems, 3)
+	assert.Equal(t, "1", tup.Elems[0].String())
+	assert.Equal(t, "true", tup.Elems[1].String())
+	assert.Equal(t, "hello", tup.Elems[2].String())
+}
+
+func TestEvalTupleString(t *testing.T) {
+	val := checkAndEval(t, `(1, true, "hi")`)
+	assert.Equal(t, `(1, true, hi)`, val.String())
+}
+
+func TestEvalTupleAccess(t *testing.T) {
+	val := checkAndEval(t, `let t = (10, 20, 30) in t.1`)
+	assert.Equal(t, "20", val.String())
+}
+
+func TestEvalTupleAccessOnPair(t *testing.T) {
+	val := checkAndEval(t, `let p = (42, true) in p.0`)
+	assert.Equal(t, "42", val.String())
+}
+
+func TestEvalTupleFourElements(t *testing.T) {
+	val := checkAndEval(t, `let t = (1, 2, 3, 4) in t.3`)
+	assert.Equal(t, "4", val.String())
+}
+
+func TestEvalTupleEquality(t *testing.T) {
+	val := checkAndEval(t, `(1, 2, 3) == (1, 2, 3)`)
+	assert.Equal(t, "true", val.String())
+
+	val2 := checkAndEval(t, `(1, 2, 3) == (1, 2, 4)`)
+	assert.Equal(t, "false", val2.String())
+}
+
+// --- Record tests ---
+
+func TestEvalRecordConstruct(t *testing.T) {
+	val := checkAndEval(t, `{x = 1, y = true}`)
+	rec, ok := val.(*RecordVal)
+	require.True(t, ok, "expected RecordVal, got %T", val)
+	require.Len(t, rec.Fields, 2)
+	assert.Equal(t, "x", rec.Fields[0].Name)
+	assert.Equal(t, "1", rec.Fields[0].Value.String())
+}
+
+func TestEvalRecordString(t *testing.T) {
+	val := checkAndEval(t, `{name = "Alice", age = 30}`)
+	assert.Equal(t, `{name = Alice, age = 30}`, val.String())
+}
+
+func TestEvalRecordAccess(t *testing.T) {
+	val := checkAndEval(t, `let r = {x = 42, y = true} in r.x`)
+	assert.Equal(t, "42", val.String())
+}
+
+func TestEvalRecordAccessSecondField(t *testing.T) {
+	val := checkAndEval(t, `let r = {a = 1, b = 2, c = 3} in r.c`)
+	assert.Equal(t, "3", val.String())
+}
+
+func TestEvalRecordEquality(t *testing.T) {
+	val := checkAndEval(t, `{x = 1, y = 2} == {x = 1, y = 2}`)
+	assert.Equal(t, "true", val.String())
+
+	val2 := checkAndEval(t, `{x = 1, y = 2} == {x = 1, y = 3}`)
+	assert.Equal(t, "false", val2.String())
+}
+
+func TestEvalNestedRecord(t *testing.T) {
+	val := checkAndEval(t, `let r = {inner = {val = 99}} in r.inner`)
+	assert.Equal(t, "{val = 99}", val.String())
+}
+
+// --- For loop tests ---
+
+func TestEvalForLoop(t *testing.T) {
+	_, ev := checkAndEvalProgram(t, `for i = 0 to 3 do println i end`)
+	assert.Equal(t, "0\n1\n2\n", ev.GetOutput())
+}
+
+func TestEvalForLoopReturnsUnit(t *testing.T) {
+	val := checkAndEval(t, `for i = 0 to 3 do i end`)
+	assert.Equal(t, "()", val.String())
+}
+
+func TestEvalForLoopEmptyRange(t *testing.T) {
+	_, ev := checkAndEvalProgram(t, `for i = 5 to 5 do println i end`)
+	assert.Equal(t, "", ev.GetOutput())
+}
+
+func TestEvalNestedForLoop(t *testing.T) {
+	_, ev := checkAndEvalProgram(t, `for i = 0 to 2 do for j = 0 to 2 do println (i * 10 + j) end end`)
+	assert.Equal(t, "0\n1\n10\n11\n", ev.GetOutput())
+}
+
+// --- Length tests ---
+
+func TestEvalLengthString(t *testing.T) {
+	val := checkAndEval(t, `length "hello"`)
+	assert.Equal(t, "5", val.String())
+}
+
+func TestEvalLengthEmptyString(t *testing.T) {
+	val := checkAndEval(t, `length ""`)
+	assert.Equal(t, "0", val.String())
+}
+
+func TestEvalLengthList(t *testing.T) {
+	val := checkAndEval(t, `length [1, 2, 3]`)
+	assert.Equal(t, "3", val.String())
+}
+
+func TestEvalLengthEmptyList(t *testing.T) {
+	val := checkAndEval(t, `length ([] : [Int])`)
+	assert.Equal(t, "0", val.String())
+}
+
+// --- CharAt tests ---
+
+func TestEvalCharAt(t *testing.T) {
+	val := checkAndEval(t, `charAt "hello" 0`)
+	assert.Equal(t, "h", val.String())
+}
+
+func TestEvalCharAtLast(t *testing.T) {
+	val := checkAndEval(t, `charAt "hello" 4`)
+	assert.Equal(t, "o", val.String())
+}
+
+func TestEvalCharAtOutOfBounds(t *testing.T) {
+	expr := mustParseEvalExpr(t, `charAt "hi" 5`)
+	chk := checker.New()
+	_, err := chk.Check(expr)
+	require.NoError(t, err)
+	ev := New()
+	_, err = ev.Eval(expr)
+	require.Error(t, err)
+	assert.Contains(t, err.Error(), "out of bounds")
+}
+
+// --- Value String representations ---
+
+func TestTupleValString(t *testing.T) {
+	v := &TupleVal{Elems: []Value{&IntVal{1}, &BoolVal{true}}}
+	assert.Equal(t, "(1, true)", v.String())
+}
+
+func TestRecordValString(t *testing.T) {
+	v := &RecordVal{Fields: []RecordFieldVal{
+		{Name: "x", Value: &IntVal{42}},
+	}}
+	assert.Equal(t, "{x = 42}", v.String())
+}

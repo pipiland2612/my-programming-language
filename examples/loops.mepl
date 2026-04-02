@@ -1,0 +1,18 @@
+// Loops: for loop with range
+
+// Basic for loop
+for i = 0 to 5 do
+  println i
+end;
+
+// For loop with computation
+for i = 1 to 6 do
+  println (i * i)
+end;
+
+// Nested for loops (multiplication table)
+for i = 1 to 4 do
+  for j = 1 to 4 do
+    println (i * j)
+  end
+end

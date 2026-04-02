@@ -34,3 +34,48 @@ func TestTokenizeUnterminatedString(t *testing.T) {
 	require.Error(t, err)
 	assert.True(t, strings.Contains(err.Error(), "unterminated string"), "unexpected error: %v", err)
 }
+
+func TestTokenizeNewKeywords(t *testing.T) {
+	src := `for i = 0 to 10 do println i end`
+	toks, err := New(src).Tokenize()
+	require.NoError(t, err)
+
+	wantTypes := []token.TokenType{
+		token.FOR, token.IDENT, token.EQ, token.INT, token.TO, token.INT,
+		token.DO, token.PRINTLN, token.IDENT, token.END, token.EOF,
+	}
+	require.Len(t, toks, len(wantTypes))
+	for i, want := range wantTypes {
+		assert.Equal(t, want, toks[i].Type, "token %d: expected %s, got %s", i, want, toks[i].Type)
+	}
+}
+
+func TestTokenizeLengthAndCharAt(t *testing.T) {
+	src := `length "hi"; charAt "hi" 0`
+	toks, err := New(src).Tokenize()
+	require.NoError(t, err)
+
+	wantTypes := []token.TokenType{
+		token.LENGTH, token.STRING, token.SEMICOLON,
+		token.CHARAT, token.STRING, token.INT, token.EOF,
+	}
+	require.Len(t, toks, len(wantTypes))
+	for i, want := range wantTypes {
+		assert.Equal(t, want, toks[i].Type, "token %d", i)
+	}
+}
+
+func TestTokenizeRecordAndDot(t *testing.T) {
+	src := `{x = 1}.x`
+	toks, err := New(src).Tokenize()
+	require.NoError(t, err)
+
+	wantTypes := []token.TokenType{
+		token.LBRACE, token.IDENT, token.EQ, token.INT, token.RBRACE,
+		token.DOT, token.IDENT, token.EOF,
+	}
+	require.Len(t, toks, len(wantTypes))
+	for i, want := range wantTypes {
+		assert.Equal(t, want, toks[i].Type, "token %d", i)
+	}
+}

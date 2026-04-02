@@ -25,12 +25,12 @@ let sum : [Int] -> Int = fix (fn (self: [Int] -> Int) => fn (lst: [Int]) =>
     | h :: t => h + (self t));
 println (sum xs);
 
-// Recursive length
-let length : [Int] -> Int = fix (fn (self: [Int] -> Int) => fn (lst: [Int]) =>
+// Recursive list length
+let listLength : [Int] -> Int = fix (fn (self: [Int] -> Int) => fn (lst: [Int]) =>
   case lst of
     | [] => 0
     | h :: t => 1 + (self t));
-println (length xs);
+println (listLength xs);
 
 // Map function
 let map : (Int -> Int) -> [Int] -> [Int] = fix (fn (self: (Int -> Int) -> [Int] -> [Int]) =>

@@ -21,6 +21,12 @@ type PairVal struct{ First, Second Value }
 type ListVal struct{ Elems []Value }
 type InlVal struct{ Value Value }
 type InrVal struct{ Value Value }
+type TupleVal struct{ Elems []Value }
+type RecordVal struct{ Fields []RecordFieldVal }
+type RecordFieldVal struct {
+	Name  string
+	Value Value
+}
 
 type ClosureVal struct {
 	Param string
@@ -36,6 +42,20 @@ func (v PairVal) String() string    { return fmt.Sprintf("(%s, %s)", v.First.Str
 func (v InlVal) String() string     { return fmt.Sprintf("inl %s", v.Value.String()) }
 func (v InrVal) String() string     { return fmt.Sprintf("inr %s", v.Value.String()) }
 func (v ClosureVal) String() string { return "<function>" }
+func (v TupleVal) String() string {
+	parts := make([]string, len(v.Elems))
+	for i, e := range v.Elems {
+		parts[i] = e.String()
+	}
+	return "(" + strings.Join(parts, ", ") + ")"
+}
+func (v RecordVal) String() string {
+	parts := make([]string, len(v.Fields))
+	for i, f := range v.Fields {
+		parts[i] = f.Name + " = " + f.Value.String()
+	}
+	return "{" + strings.Join(parts, ", ") + "}"
+}
 
 func (v ListVal) String() string {
 	parts := make([]string, len(v.Elems))
@@ -298,6 +318,109 @@ func (ev *Evaluator) eval(expr ast.Expr, env *Env) (Value, error) {
 	case *ast.ImportExpr:
 		return &UnitVal{}, nil
 
+	case *ast.TupleExpr:
+		elems := make([]Value, len(e.Elems))
+		for i, elem := range e.Elems {
+			v, err := ev.eval(elem, env)
+			if err != nil {
+				return nil, err
+			}
+			elems[i] = v
+		}
+		return &TupleVal{Elems: elems}, nil
+
+	case *ast.TupleAccessExpr:
+		v, err := ev.eval(e.Tuple, env)
+		if err != nil {
+			return nil, err
+		}
+		switch val := v.(type) {
+		case *TupleVal:
+			return val.Elems[e.Index], nil
+		case *PairVal:
+			if e.Index == 0 {
+				return val.First, nil
+			}
+			return val.Second, nil
+		default:
+			return nil, errAt(e.Pos, "index access expects a tuple or pair")
+		}
+
+	case *ast.RecordExpr:
+		fields := make([]RecordFieldVal, len(e.Fields))
+		for i, f := range e.Fields {
+			v, err := ev.eval(f.Value, env)
+			if err != nil {
+				return nil, err
+			}
+			fields[i] = RecordFieldVal{Name: f.Name, Value: v}
+		}
+		return &RecordVal{Fields: fields}, nil
+
+	case *ast.RecordAccessExpr:
+		v, err := ev.eval(e.Record, env)
+		if err != nil {
+			return nil, err
+		}
+		r := v.(*RecordVal)
+		for _, f := range r.Fields {
+			if f.Name == e.Field {
+				return f.Value, nil
+			}
+		}
+		return nil, errAt(e.Pos, fmt.Sprintf("record has no field '%s'", e.Field))
+
+	case *ast.ForExpr:
+		startV, err := ev.eval(e.Start, env)
+		if err != nil {
+			return nil, err
+		}
+		endV, err := ev.eval(e.End, env)
+		if err != nil {
+			return nil, err
+		}
+		start := startV.(*IntVal).Value
+		end := endV.(*IntVal).Value
+		for i := start; i < end; i++ {
+			loopEnv := NewEnv(env)
+			loopEnv.Set(e.Var, &IntVal{Value: i})
+			_, err := ev.eval(e.Body, loopEnv)
+			if err != nil {
+				return nil, err
+			}
+		}
+		return &UnitVal{}, nil
+
+	case *ast.LengthExpr:
+		v, err := ev.eval(e.Expr, env)
+		if err != nil {
+			return nil, err
+		}
+		switch val := v.(type) {
+		case *StringVal:
+			return &IntVal{Value: len([]rune(val.Value))}, nil
+		case *ListVal:
+			return &IntVal{Value: len(val.Elems)}, nil
+		default:
+			return nil, errAt(e.Pos, "length expects a String or List")
+		}
+
+	case *ast.CharAtExpr:
+		strV, err := ev.eval(e.Str, env)
+		if err != nil {
+			return nil, err
+		}
+		idxV, err := ev.eval(e.Index, env)
+		if err != nil {
+			return nil, err
+		}
+		s := []rune(strV.(*StringVal).Value)
+		idx := idxV.(*IntVal).Value
+		if idx < 0 || idx >= len(s) {
+			return nil, errAt(e.Pos, fmt.Sprintf("string index %d out of bounds for string of length %d", idx, len(s)))
+		}
+		return &StringVal{Value: string(s[idx])}, nil
+
 	default:
 		return nil, fmt.Errorf("unknown expression type: %T", expr)
 	}
@@ -465,6 +588,30 @@ func valuesEqual(a, b Value) bool {
 			}
 			for i := range a.Elems {
 				if !valuesEqual(a.Elems[i], b.Elems[i]) {
+					return false
+				}
+			}
+			return true
+		}
+	case *TupleVal:
+		if b, ok := b.(*TupleVal); ok {
+			if len(a.Elems) != len(b.Elems) {
+				return false
+			}
+			for i := range a.Elems {
+				if !valuesEqual(a.Elems[i], b.Elems[i]) {
+					return false
+				}
+			}
+			return true
+		}
+	case *RecordVal:
+		if b, ok := b.(*RecordVal); ok {
+			if len(a.Fields) != len(b.Fields) {
+				return false
+			}
+			for i := range a.Fields {
+				if a.Fields[i].Name != b.Fields[i].Name || !valuesEqual(a.Fields[i].Value, b.Fields[i].Value) {
 					return false
 				}
 			}

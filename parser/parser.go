@@ -291,8 +291,29 @@ func (p *Parser) parseUnary() (ast.Expr, error) {
 	return p.parseApp()
 }
 
-func (p *Parser) parseApp() (ast.Expr, error) {
+func (p *Parser) parsePostfix() (ast.Expr, error) {
 	expr, err := p.parsePrimary()
+	if err != nil {
+		return nil, err
+	}
+	for p.cur().Type == token.DOT {
+		pos := p.cur().Pos
+		p.advance() // .
+		if p.cur().Type == token.INT {
+			idx, _ := strconv.Atoi(p.advance().Literal)
+			expr = &ast.TupleAccessExpr{Tuple: expr, Index: idx, Pos: pos}
+		} else if p.cur().Type == token.IDENT {
+			field := p.advance().Literal
+			expr = &ast.RecordAccessExpr{Record: expr, Field: field, Pos: pos}
+		} else {
+			return nil, p.errAt(pos, "expected field name or tuple index after '.'")
+		}
+	}
+	return expr, nil
+}
+
+func (p *Parser) parseApp() (ast.Expr, error) {
+	expr, err := p.parsePostfix()
 	if err != nil {
 		return nil, err
 	}
@@ -300,7 +321,7 @@ func (p *Parser) parseApp() (ast.Expr, error) {
 	// Function application: f x y == (f(x))(y)
 	for p.isAppArg() {
 		pos := p.cur().Pos
-		arg, err := p.parsePrimary()
+		arg, err := p.parsePostfix()
 		if err != nil {
 			return nil, err
 		}
@@ -313,7 +334,7 @@ func (p *Parser) parseApp() (ast.Expr, error) {
 func (p *Parser) isAppArg() bool {
 	t := p.cur().Type
 	return t == token.INT || t == token.STRING || t == token.TRUE || t == token.FALSE ||
-		t == token.IDENT || t == token.LPAREN || t == token.LBRACKET
+		t == token.IDENT || t == token.LPAREN || t == token.LBRACKET || t == token.LBRACE
 }
 
 func (p *Parser) parsePrimary() (ast.Expr, error) {
@@ -362,6 +383,14 @@ func (p *Parser) parsePrimary() (ast.Expr, error) {
 		return p.parsePrint(false)
 	case token.PRINTLN:
 		return p.parsePrint(true)
+	case token.LBRACE:
+		return p.parseRecord()
+	case token.FOR:
+		return p.parseFor()
+	case token.LENGTH:
+		return p.parseLength()
+	case token.CHARAT:
+		return p.parseCharAt()
 	default:
 		return nil, p.errAt(p.cur().Pos, fmt.Sprintf("unexpected token '%s'", p.cur().Literal))
 	}
@@ -391,12 +420,28 @@ func (p *Parser) parseParenOrPair() (ast.Expr, error) {
 		return nil, err
 	}
 
-	// Pair
+	// Pair or Tuple
 	if p.cur().Type == token.COMMA {
 		p.advance()
 		second, err := p.ParseExpr()
 		if err != nil {
 			return nil, err
+		}
+		// Check for tuple (3+ elements)
+		if p.cur().Type == token.COMMA {
+			elems := []ast.Expr{first, second}
+			for p.cur().Type == token.COMMA {
+				p.advance()
+				elem, err := p.ParseExpr()
+				if err != nil {
+					return nil, err
+				}
+				elems = append(elems, elem)
+			}
+			if _, err := p.expect(token.RPAREN); err != nil {
+				return nil, err
+			}
+			return &ast.TupleExpr{Elems: elems, Pos: pos}, nil
 		}
 		if _, err := p.expect(token.RPAREN); err != nil {
 			return nil, err
@@ -526,7 +571,7 @@ func (p *Parser) parseFix() (ast.Expr, error) {
 	pos := p.cur().Pos
 	p.advance() // fix
 
-	expr, err := p.parsePrimary()
+	expr, err := p.parsePostfix()
 	if err != nil {
 		return nil, err
 	}
@@ -537,7 +582,7 @@ func (p *Parser) parseFix() (ast.Expr, error) {
 func (p *Parser) parseFst() (ast.Expr, error) {
 	pos := p.cur().Pos
 	p.advance() // fst
-	expr, err := p.parsePrimary()
+	expr, err := p.parsePostfix()
 	if err != nil {
 		return nil, err
 	}
@@ -547,7 +592,7 @@ func (p *Parser) parseFst() (ast.Expr, error) {
 func (p *Parser) parseSnd() (ast.Expr, error) {
 	pos := p.cur().Pos
 	p.advance() // snd
-	expr, err := p.parsePrimary()
+	expr, err := p.parsePostfix()
 	if err != nil {
 		return nil, err
 	}
@@ -557,7 +602,7 @@ func (p *Parser) parseSnd() (ast.Expr, error) {
 func (p *Parser) parseInl() (ast.Expr, error) {
 	pos := p.cur().Pos
 	p.advance() // inl
-	expr, err := p.parsePrimary()
+	expr, err := p.parsePostfix()
 	if err != nil {
 		return nil, err
 	}
@@ -578,7 +623,7 @@ func (p *Parser) parseInl() (ast.Expr, error) {
 func (p *Parser) parseInr() (ast.Expr, error) {
 	pos := p.cur().Pos
 	p.advance() // inr
-	expr, err := p.parsePrimary()
+	expr, err := p.parsePostfix()
 	if err != nil {
 		return nil, err
 	}
@@ -683,11 +728,101 @@ func (p *Parser) parsePattern() (ast.Pattern, error) {
 func (p *Parser) parsePrint(newline bool) (ast.Expr, error) {
 	pos := p.cur().Pos
 	p.advance() // print / println
-	expr, err := p.parsePrimary()
+	expr, err := p.parsePostfix()
 	if err != nil {
 		return nil, err
 	}
 	return &ast.PrintExpr{Expr: expr, Newline: newline, Pos: pos}, nil
+}
+
+func (p *Parser) parseRecord() (ast.Expr, error) {
+	pos := p.cur().Pos
+	p.advance() // {
+
+	var fields []ast.RecordField
+	if p.cur().Type != token.RBRACE {
+		for {
+			name, err := p.expect(token.IDENT)
+			if err != nil {
+				return nil, err
+			}
+			if _, err := p.expect(token.EQ); err != nil {
+				return nil, err
+			}
+			val, err := p.ParseExpr()
+			if err != nil {
+				return nil, err
+			}
+			fields = append(fields, ast.RecordField{Name: name.Literal, Value: val})
+			if p.cur().Type != token.COMMA {
+				break
+			}
+			p.advance()
+		}
+	}
+	if _, err := p.expect(token.RBRACE); err != nil {
+		return nil, err
+	}
+	return &ast.RecordExpr{Fields: fields, Pos: pos}, nil
+}
+
+func (p *Parser) parseFor() (ast.Expr, error) {
+	pos := p.cur().Pos
+	p.advance() // for
+
+	name, err := p.expect(token.IDENT)
+	if err != nil {
+		return nil, err
+	}
+	if _, err := p.expect(token.EQ); err != nil {
+		return nil, err
+	}
+	start, err := p.ParseExpr()
+	if err != nil {
+		return nil, err
+	}
+	if _, err := p.expect(token.TO); err != nil {
+		return nil, err
+	}
+	end, err := p.ParseExpr()
+	if err != nil {
+		return nil, err
+	}
+	if _, err := p.expect(token.DO); err != nil {
+		return nil, err
+	}
+	body, err := p.ParseExpr()
+	if err != nil {
+		return nil, err
+	}
+	if _, err := p.expect(token.END); err != nil {
+		return nil, err
+	}
+	return &ast.ForExpr{Var: name.Literal, Start: start, End: end, Body: body, Pos: pos}, nil
+}
+
+func (p *Parser) parseLength() (ast.Expr, error) {
+	pos := p.cur().Pos
+	p.advance() // length
+	expr, err := p.parsePostfix()
+	if err != nil {
+		return nil, err
+	}
+	return &ast.LengthExpr{Expr: expr, Pos: pos}, nil
+}
+
+func (p *Parser) parseCharAt() (ast.Expr, error) {
+	pos := p.cur().Pos
+	p.advance() // charAt
+	str, err := p.parsePostfix()
+	if err != nil {
+		return nil, err
+	}
+	idx, err := p.parsePostfix()
+	if err != nil {
+		return nil, err
+	}
+	return &ast.CharAtExpr{Str: str, Index: idx, Pos: pos}, nil
 }
 
 // Type parsing
@@ -749,12 +884,28 @@ func (p *Parser) parsePrimaryType() (ast.Type, error) {
 		if err != nil {
 			return nil, err
 		}
-		// Check for pair type
+		// Check for pair or tuple type
 		if p.cur().Type == token.COMMA {
 			p.advance()
 			t2, err := p.parseType()
 			if err != nil {
 				return nil, err
+			}
+			// Check for tuple type (3+ elements)
+			if p.cur().Type == token.COMMA {
+				elems := []ast.Type{t, t2}
+				for p.cur().Type == token.COMMA {
+					p.advance()
+					tn, err := p.parseType()
+					if err != nil {
+						return nil, err
+					}
+					elems = append(elems, tn)
+				}
+				if _, err := p.expect(token.RPAREN); err != nil {
+					return nil, err
+				}
+				return &ast.TupleType{Elems: elems}, nil
 			}
 			if _, err := p.expect(token.RPAREN); err != nil {
 				return nil, err
@@ -765,6 +916,33 @@ func (p *Parser) parsePrimaryType() (ast.Type, error) {
 			return nil, err
 		}
 		return t, nil
+	case token.LBRACE:
+		p.advance()
+		var fields []ast.RecordFieldType
+		if p.cur().Type != token.RBRACE {
+			for {
+				name, err := p.expect(token.IDENT)
+				if err != nil {
+					return nil, err
+				}
+				if _, err := p.expect(token.COLON); err != nil {
+					return nil, err
+				}
+				ft, err := p.parseType()
+				if err != nil {
+					return nil, err
+				}
+				fields = append(fields, ast.RecordFieldType{Name: name.Literal, Type: ft})
+				if p.cur().Type != token.COMMA {
+					break
+				}
+				p.advance()
+			}
+		}
+		if _, err := p.expect(token.RBRACE); err != nil {
+			return nil, err
+		}
+		return &ast.RecordType{Fields: fields}, nil
 	case token.LBRACKET:
 		p.advance()
 		elem, err := p.parseType()
