@@ -1,0 +1,37 @@
+// Integers: literals and arithmetic operations
+
+// Integer literals
+let a : Int = 0;
+let b : Int = 42;
+let c : Int = 1000;
+
+// Arithmetic operations
+let sum : Int = 10 + 20;
+println sum;
+
+let diff : Int = 100 - 37;
+println diff;
+
+let prod : Int = 6 * 7;
+println prod;
+
+let quot : Int = 100 / 3;
+println quot;
+
+let rem : Int = 17 % 5;
+println rem;
+
+// Compound expressions
+let expr : Int = (2 + 3) * (10 - 4);
+println expr;
+
+// Negative numbers via unary minus
+let neg : Int = -5;
+println neg;
+
+// Comparison operators return Bool
+let lt : Bool = 3 < 5;
+println lt;
+
+let eq : Bool = 42 == 42;
+println eq

@@ -1,0 +1,2 @@
+// Pairs type errors: fst applied to non-pair
+let x : Int = fst 42

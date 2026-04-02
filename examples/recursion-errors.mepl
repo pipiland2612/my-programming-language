@@ -1,0 +1,3 @@
+// Recursion type errors: fix requires a function of type A -> A
+// Here we try to fix a function Int -> Bool, which is not A -> A
+let bad : Bool = fix (fn (f: Int -> Bool) => fn (n: Int) => n > 0)

@@ -1,0 +1,5 @@
+// Lists type errors: case branches must return the same type
+let xs : [Int] = [1, 2, 3];
+let bad : Int = case xs of
+  | [] => 0
+  | h :: t => true

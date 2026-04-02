@@ -1,0 +1,36 @@
+// Sums: inl/inr construction and case matching
+
+// Construct sum values
+let left : Int + Bool = inl 42 as Int + Bool;
+let right : Int + Bool = inr true as Int + Bool;
+
+// Case matching on sums
+let val1 : Int = case left of
+  | inl x => x
+  | inr b => if b then 1 else 0;
+println val1;
+
+let val2 : Int = case right of
+  | inl x => x
+  | inr b => if b then 1 else 0;
+println val2;
+
+// Sum as a simple "Maybe" type: Int + Unit
+let just : Int + Unit = inl 10 as Int + Unit;
+let nothing : Int + Unit = inr () as Int + Unit;
+
+let get_or_default : (Int + Unit) -> Int -> Int =
+  fn (maybe: Int + Unit) => fn (default_val: Int) =>
+    case maybe of
+      | inl x => x
+      | inr u => default_val;
+
+println (get_or_default just 0);
+println (get_or_default nothing 0);
+
+// Sum as Either
+let parse_result : String + Int = inr 42 as String + Int;
+let display : String = case parse_result of
+  | inl err => err
+  | inr val => "success";
+println display

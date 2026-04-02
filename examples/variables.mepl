@@ -1,0 +1,23 @@
+// Variables: creating variables and accessing them in scope
+
+// Basic variable binding
+let x : Int = 42;
+println x;
+
+// Variable used in expression
+let y : Int = x + 8;
+println y;
+
+// Nested scoping with let-in
+let result : Int = let a : Int = 10 in let b : Int = 20 in a + b;
+println result;
+
+// Variables shadow outer scope
+let z : Int = 1;
+let z2 : Int = let z : Int = 100 in z + 1;
+println z;
+println z2;
+
+// Variable in function body
+let f : Int -> Int = fn (n: Int) => let local : Int = n * 2 in local + 1;
+println (f 5)

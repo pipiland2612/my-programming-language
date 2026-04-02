@@ -1,0 +1,54 @@
+// Lists: construction, case matching, recursive operations
+
+// Construct a list
+let xs : [Int] = [1, 2, 3, 4, 5];
+println xs;
+
+// Empty list with type annotation
+let empty : [Int] = [] : [Int];
+println empty;
+
+// Cons operator (::) prepends an element
+let ys : [Int] = 0 :: xs;
+println ys;
+
+// Case matching on lists
+let head_or_zero : Int = case xs of
+  | [] => 0
+  | h :: t => h;
+println head_or_zero;
+
+// Recursive sum using fix
+let sum : [Int] -> Int = fix (fn (self: [Int] -> Int) => fn (lst: [Int]) =>
+  case lst of
+    | [] => 0
+    | h :: t => h + (self t));
+println (sum xs);
+
+// Recursive length
+let length : [Int] -> Int = fix (fn (self: [Int] -> Int) => fn (lst: [Int]) =>
+  case lst of
+    | [] => 0
+    | h :: t => 1 + (self t));
+println (length xs);
+
+// Map function
+let map : (Int -> Int) -> [Int] -> [Int] = fix (fn (self: (Int -> Int) -> [Int] -> [Int]) =>
+  fn (f: Int -> Int) => fn (lst: [Int]) =>
+    case lst of
+      | [] => [] : [Int]
+      | h :: t => (f h) :: (self f t));
+
+let doubled : [Int] = map (fn (x: Int) => x * 2) xs;
+println doubled;
+
+// Fold function (fold right)
+let foldr : (Int -> Int -> Int) -> Int -> [Int] -> Int =
+  fix (fn (self: (Int -> Int -> Int) -> Int -> [Int] -> Int) =>
+    fn (f: Int -> Int -> Int) => fn (acc: Int) => fn (lst: [Int]) =>
+      case lst of
+        | [] => acc
+        | h :: t => f h (self f acc t));
+
+let product : Int = foldr (fn (a: Int) => fn (b: Int) => a * b) 1 xs;
+println product

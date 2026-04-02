@@ -1,0 +1,38 @@
+// Functions: lambdas, application, closures, arrow types
+
+// Anonymous function (lambda abstraction)
+let double : Int -> Int = fn (x: Int) => x * 2;
+println (double 21);
+
+// Function application
+let result : Int = (fn (x: Int) => x + 1) 10;
+println result;
+
+// Higher-order function: function taking a function
+let apply : (Int -> Int) -> Int -> Int = fn (f: Int -> Int) => fn (x: Int) => f x;
+println (apply double 5);
+
+// Closures capture the environment
+let make_adder : Int -> Int -> Int = fn (x: Int) => fn (y: Int) => x + y;
+let add10 : Int -> Int = make_adder 10;
+let add20 : Int -> Int = make_adder 20;
+println (add10 5);
+println (add20 5);
+
+// Curried function
+let add : Int -> Int -> Int = fn (a: Int) => fn (b: Int) => a + b;
+let sum : Int = add 3 4;
+println sum;
+
+// Function composition
+let compose : (Int -> Int) -> (Int -> Int) -> Int -> Int =
+  fn (f: Int -> Int) => fn (g: Int -> Int) => fn (x: Int) => f (g x);
+
+let inc : Int -> Int = fn (x: Int) => x + 1;
+let double_then_inc : Int -> Int = compose inc double;
+println (double_then_inc 5);
+
+// Function as argument to if
+let chooser : Bool -> (Int -> Int) = fn (b: Bool) => if b then double else inc;
+println ((chooser true) 10);
+println ((chooser false) 10)

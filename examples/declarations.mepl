@@ -1,0 +1,26 @@
+// Declarations: named functions and constants
+
+// Named constants
+let PI : Int = 3;
+let MAX_SIZE : Int = 100;
+
+// Named function declarations
+let double : Int -> Int = fn (x: Int) => x * 2;
+let square : Int -> Int = fn (x: Int) => x * x;
+
+// Declarations can refer to earlier declarations
+let quadruple : Int -> Int = fn (x: Int) => double (double x);
+println (quadruple 5);
+
+// Higher-order declaration
+let apply_twice : (Int -> Int) -> Int -> Int = fn (f: Int -> Int) => fn (x: Int) => f (f x);
+println (apply_twice double 3);
+
+// Recursive declaration using fix
+let factorial : Int -> Int = fix (fn (f: Int -> Int) => fn (n: Int) =>
+  if n == 0 then 1 else n * (f (n - 1)));
+
+// Using declared functions together
+let result : Int = factorial (double PI);
+println result;
+println MAX_SIZE

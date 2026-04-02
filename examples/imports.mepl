@@ -1,0 +1,18 @@
+// Imports: importing code from another file
+
+// Import the math library
+import "mathlib.mepl";
+
+// Use imported declarations
+println (abs (0 - 42));
+println (max 10 20);
+println (min 10 20);
+
+// Can use imported functions in new declarations
+let clamp : Int -> Int -> Int -> Int =
+  fn (lo: Int) => fn (hi: Int) => fn (x: Int) =>
+    max lo (min hi x);
+
+println (clamp 0 100 150);
+println (clamp 0 100 50);
+println (clamp 0 100 (0 - 10))

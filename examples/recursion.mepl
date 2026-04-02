@@ -1,0 +1,28 @@
+// Recursion: fixed-point operator
+
+// Factorial using fix
+let factorial : Int -> Int = fix (fn (f: Int -> Int) => fn (n: Int) =>
+  if n == 0 then 1 else n * (f (n - 1)));
+println (factorial 0);
+println (factorial 5);
+println (factorial 10);
+
+// Fibonacci using fix
+let fib : Int -> Int = fix (fn (f: Int -> Int) => fn (n: Int) =>
+  if n <= 1 then n else (f (n - 1)) + (f (n - 2)));
+println (fib 0);
+println (fib 1);
+println (fib 10);
+
+// Power function
+let power : Int -> Int -> Int = fix (fn (self: Int -> Int -> Int) =>
+  fn (base: Int) => fn (exp: Int) =>
+    if exp == 0 then 1 else base * (self base (exp - 1)));
+println (power 2 10);
+
+// GCD using Euclid's algorithm
+let gcd : Int -> Int -> Int = fix (fn (self: Int -> Int -> Int) =>
+  fn (a: Int) => fn (b: Int) =>
+    if b == 0 then a else self b (a % b));
+println (gcd 48 18);
+println (gcd 100 75)

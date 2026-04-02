@@ -1,0 +1,2 @@
+// Booleans type errors: if branches must have the same type
+let x : Int = if true then 1 else false

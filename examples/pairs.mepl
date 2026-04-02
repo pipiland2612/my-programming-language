@@ -1,0 +1,27 @@
+// Pairs: construction and destructuring
+
+// Construct a pair
+let p : (Int, Bool) = (42, true);
+
+// Destructure with fst and snd
+let first : Int = fst p;
+let second : Bool = snd p;
+println first;
+println second;
+
+// Nested pairs
+let nested : (Int, (String, Bool)) = (1, ("hello", false));
+println (fst nested);
+println (fst (snd nested));
+println (snd (snd nested));
+
+// Pair of functions
+let ops : (Int -> Int, Int -> Int) = (fn (x: Int) => x + 1, fn (x: Int) => x * 2);
+println ((fst ops) 5);
+println ((snd ops) 5);
+
+// Swap function
+let swap : (Int, Bool) -> (Bool, Int) = fn (p: (Int, Bool)) => (snd p, fst p);
+let swapped : (Bool, Int) = swap (10, true);
+println (fst swapped);
+println (snd swapped)

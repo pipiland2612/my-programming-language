@@ -1,0 +1,2 @@
+// Integers type errors: adding an integer and a boolean
+let x : Int = 5 + true

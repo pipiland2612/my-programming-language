@@ -1,0 +1,2 @@
+// Strings type errors: cannot subtract strings
+let bad : String = "hello" - "world"

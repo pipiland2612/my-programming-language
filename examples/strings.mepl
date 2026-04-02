@@ -1,0 +1,24 @@
+// Strings: construction and operations
+
+// String literals
+let greeting : String = "Hello";
+let name : String = "World";
+
+// String concatenation
+let message : String = greeting + ", " + name + "!";
+println message;
+
+// String in data structures
+let pair : (String, Int) = ("Alice", 30);
+println pair;
+
+// String comparison
+let same : Bool = "hello" == "hello";
+println same;
+
+let diff : Bool = "hello" != "world";
+println diff;
+
+// String in if-then-else
+let lang : String = if true then "MEPL" else "other";
+println lang

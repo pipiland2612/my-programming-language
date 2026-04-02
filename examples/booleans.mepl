@@ -1,0 +1,35 @@
+// Booleans: literals and boolean operations
+
+// Boolean literals
+let t : Bool = true;
+let f : Bool = false;
+
+// Logical operations
+let a : Bool = true && false;
+println a;
+
+let b : Bool = true || false;
+println b;
+
+let c : Bool = !true;
+println c;
+
+// If-then-else
+let x : Int = if true then 1 else 0;
+println x;
+
+// Nested if
+let grade : Int = 85;
+let result : String = if grade >= 90 then "A" else if grade >= 80 then "B" else "C";
+println result;
+
+// Boolean from comparison
+let isPositive : Bool = 42 > 0;
+println isPositive;
+
+// Equality
+let same : Bool = 10 == 10;
+println same;
+
+let diff : Bool = 10 != 20;
+println diff

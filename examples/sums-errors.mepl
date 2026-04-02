@@ -1,0 +1,5 @@
+// Sums type errors: case branches must return the same type
+let s : Int + Bool = inl 42 as Int + Bool;
+let bad : Int = case s of
+  | inl x => x
+  | inr b => "not an int"

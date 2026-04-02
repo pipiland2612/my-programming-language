@@ -1,0 +1,33 @@
+// Printing: output support for all types
+
+// Print integers
+println 42;
+
+// Print booleans
+println true;
+println false;
+
+// Print strings
+println "Hello, World!";
+
+// Print pairs
+println (1, true);
+
+// Print lists
+println [1, 2, 3];
+
+// Print sums
+println (inl 5 as Int + Bool);
+println (inr true as Int + Bool);
+
+// Print nested structures
+println ([1, 2], "hello");
+println (1, (2, (3, 4)));
+
+// Print functions
+let f : Int -> Int = fn (x: Int) => x;
+println f;
+
+// Print without newline then with newline
+print "Hello ";
+println "World!"

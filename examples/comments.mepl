@@ -1,0 +1,15 @@
+// This is a single-line comment
+
+/* This is a
+   multi-line comment */
+
+let x : Int = 42; // inline comment
+println x;
+
+/* Comments can be used to
+   temporarily disable code:
+   let y : Int = "this would be a type error";
+*/
+
+let result : Int = /* inline block comment */ 10 + 20;
+println result

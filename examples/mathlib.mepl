@@ -1,0 +1,4 @@
+// A small math library for import testing
+let abs : Int -> Int = fn (x: Int) => if x < 0 then 0 - x else x;
+let max : Int -> Int -> Int = fn (a: Int) => fn (b: Int) => if a > b then a else b;
+let min : Int -> Int -> Int = fn (a: Int) => fn (b: Int) => if a < b then a else b
