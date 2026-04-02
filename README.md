@@ -1,15 +1,25 @@
-# MEPL — Modern and Emerging Programming Language
+# MEPL: Modern and Emerging Programming Language
 
 MEPL is a statically-typed functional programming language with an interactive REPL, implemented in Go.
 
 ## Getting Started
 
-### Running with Docker
+I already have the `mepl` binary built, you can run the examples directly.
 
-If you do not have Go installed locally, you can still build and run MEPL using Docker alone.
+### Running Example Files
 
 ```bash
+# Run any example file
+./mepl examples/integers.mepl
+./mepl examples/functions.mepl
+./mepl examples/lists.mepl
+```
 
+### Building with Docker
+
+If you want to build `mepl` yourself with Docker:
+
+```bash
 docker build -t mepl .
 docker run --rm mepl examples/integers.mepl
 ```
@@ -19,31 +29,14 @@ docker run --rm mepl examples/integers.mepl
 docker run --rm -it mepl   # REPL mode
 ```
 
-### Running with Go
+### Building with Go
+
+If you want to build `mepl` yourself with Go:
+
 Required **Go 1.25** or later
-
-### Quick Start
-```bash
-# Build and run directly
-go build -o mepl . && ./mepl examples/integers.mepl
-```
-
-### Building
 
 ```bash
 go build -o mepl .
-```
-
-### Running Example Files
-
-```bash
-# Run any example file
-./mepl examples/integers.mepl
-./mepl examples/functions.mepl
-./mepl examples/lists.mepl
-
-# Or without building first
-go run . examples/integers.mepl
 ```
 
 ### Running the REPL
@@ -70,19 +63,19 @@ MEPL is an expression-based language where everything evaluates to a value. It f
 
 ### Types
 
-| Type | Syntax | Description |
-|------|--------|-------------|
-| Integer | `Int` | Whole numbers |
-| Boolean | `Bool` | `true` or `false` |
-| String | `String` | Text in double quotes |
-| Unit | `Unit` | The unit value `()` |
-| Function | `A -> B` | Function from `A` to `B` |
-| Pair | `(A, B)` | Two-element pair |
-| Tuple | `(A, B, C, ...)` | N-element tuple (3+) |
-| List | `[A]` | Homogeneous list |
-| Sum | `A + B` | Tagged union (left or right) |
-| Record | `{x: Int, y: Bool}` | Named fields |
-| ADT | `type Option = None | Some of Int` | Named algebraic data type |
+| Type | Syntax                                          | Description |
+|------|-------------------------------------------------|-------------|
+| Integer | `Int`                                           | Whole numbers |
+| Boolean | `Bool`                                          | `true` or `false` |
+| String | `String`                                        | Text in double quotes |
+| Unit | `Unit`                                          | The unit value `()` |
+| Function | `A -> B`                                        | Function from `A` to `B` |
+| Pair | `(A, B)`                                        | Two-element pair |
+| Tuple | `(A, B, C, ...)`                                | N-element tuple (3+) |
+| List | `[A]`                                           | Homogeneous list |
+| Sum | `A + B`                                         | Tagged union (left or right) |
+| Record | `{x: Int, y: Bool}`                             | Named fields |
+| ADT | `type Name = Constructor1 \| Constructor2 of T` | User-defined algebraic data type with one or more constructors |
 
 ### Variables and Declarations
 
@@ -174,13 +167,22 @@ let a = person.age      // 30
 
 ### Algebraic Data Types
 
+ADTs let you define your own named types with multiple constructors. Constructors can be nullary like `Red`, or carry data like `Some of Int`. You typically consume ADT values with `case` pattern matching.
+
 ```
+type Color = Red | Green | Blue
 type Option = None | Some of Int
 
 let getValue : Option -> Int = fn (opt : Option) =>
   case opt of
     | None => 0
     | Some n => n
+
+let colorName : Color -> String = fn (c : Color) =>
+  case c of
+    | Red => "red"
+    | Green => "green"
+    | Blue => "blue"
 ```
 
 ### Recursion
